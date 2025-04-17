@@ -1,0 +1,115 @@
+import { useSDK } from "@/plugins/sdk";
+import { defineStore } from "pinia";
+import { GrepResultsResponse } from "shared";
+import { computed, ref } from "vue";
+
+export const useGrepStore = defineStore("grep", () => {
+  const sdk = useSDK();
+
+  const pattern = ref("");
+  const includeRequests = ref(true);
+  const includeResponses = ref(true);
+  const maxResults = ref<number | null>(null);
+  const isSearching = ref(false);
+  const matchGroup = ref<number | null>(null);
+  const onlyInScope = ref(true);
+  const progress = ref(0);
+
+  const searchResults = ref<GrepResultsResponse | null>(null);
+
+  const searchGrepRequests = async () => {
+    if (!pattern.value.trim()) {
+      sdk.window.showToast("Please enter a search pattern", {
+        variant: "error",
+      });
+      return;
+    }
+
+    searchResults.value = null;
+    isSearching.value = true;
+    progress.value = 0;
+
+    try {
+      const { error, data } = await sdk.backend.grepRequests(pattern.value, {
+        includeRequests: includeRequests.value,
+        includeResponses: includeResponses.value,
+        maxResults: maxResults.value ?? null,
+        matchGroup: matchGroup.value ?? null,
+        onlyInScope: onlyInScope.value,
+      });
+
+      if (error) {
+        sdk.window.showToast(error, {
+          variant: "error",
+        });
+        return;
+      }
+
+      if (!data) {
+        sdk.window.showToast("No results found", {
+          variant: "info",
+        });
+        return;
+      }
+
+      searchResults.value = data;
+
+      if (data.count === 0) {
+        sdk.window.showToast("No matches found for the pattern", {
+          variant: "info",
+        });
+      } else {
+        sdk.window.showToast(`Found ${data.count} matching results`, {
+          variant: "success",
+        });
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      sdk.window.showToast("Failed to search requests: " + errorMessage, {
+        variant: "error",
+      });
+    } finally {
+      isSearching.value = false;
+    }
+  };
+
+  const matchesText = computed((): string => {
+    if (!searchResults.value) return "";
+
+    const matches = searchResults.value.matches.map((match) => match.content);
+
+    return matches.join("\n");
+  });
+
+  const uniqueMatchesCount = computed((): number => {
+    if (!searchResults.value) return 0;
+
+    const uniqueSet = new Set<string>();
+
+    searchResults.value.matches.forEach((match) => {
+      uniqueSet.add(match.content);
+    });
+
+    return uniqueSet.size;
+  });
+
+  sdk.backend.onEvent("caidogrep:progress", (value: number) => {
+    progress.value = value;
+  });
+
+  return {
+    pattern,
+    includeRequests,
+    includeResponses,
+    maxResults,
+    isSearching,
+    matchGroup,
+    onlyInScope,
+    searchResults,
+    matchesText,
+    uniqueMatchesCount,
+    searchGrepRequests,
+    progress,
+  };
+});

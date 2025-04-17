@@ -1,0 +1,86 @@
+<script setup lang="ts">
+import { useGrepStore } from "@/stores";
+import Checkbox from "primevue/checkbox";
+import InputNumber from "primevue/inputnumber";
+
+const grepStore = useGrepStore();
+</script>
+
+<template>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.includeRequests"
+            :binary="true"
+            inputId="includeRequests"
+          />
+          <label for="includeRequests" class="ml-3">Include Requests</label>
+        </div>
+
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.includeResponses"
+            :binary="true"
+            inputId="includeResponses"
+          />
+          <label for="includeResponses" class="ml-3">Include Responses</label>
+        </div>
+
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.onlyInScope"
+            :binary="true"
+            inputId="onlyInScope"
+          />
+          <label for="onlyInScope" class="ml-3">Only In Scope</label>
+          <i
+            class="fas fa-info-circle ml-2 text-gray-500"
+            v-tooltip.right="'Only include requests that are in scope'"
+          ></i>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-6">
+      <div>
+        <label class="block mb-2.5 font-medium">
+          Match Group
+          <i
+            class="fas fa-info-circle ml-1 text-gray-500"
+            v-tooltip.right="
+              'Extract specific group from regex match. Leave empty to extract entire match'
+            "
+          ></i>
+        </label>
+        <InputNumber
+          v-model="grepStore.matchGroup"
+          :min="0"
+          :max="99"
+          placeholder="Match group (optional)"
+          class="w-full"
+        />
+      </div>
+
+      <div>
+        <label class="block mb-2.5 font-medium">
+          Max Results
+          <i
+            class="fas fa-info-circle ml-1 text-gray-500"
+            v-tooltip.right="
+              'Maximum number of results to return. Leave empty for no limit'
+            "
+          ></i>
+        </label>
+        <InputNumber
+          v-model="grepStore.maxResults"
+          :min="1"
+          :max="1000"
+          placeholder="Unlimited"
+          class="w-full"
+        />
+      </div>
+    </div>
+  </div>
+</template>
