@@ -15,3 +15,8 @@
 # Data Grep
 
 Extract data from your requests and responses
+
+
+
+https://github.com/user-attachments/assets/3f3c370a-2263-4d27-8c2b-712532f0a625
+
