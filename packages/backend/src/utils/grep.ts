@@ -87,11 +87,11 @@ export function extractMatches(
  */
 export async function executeQueryWithCancellationCheck<T>(
   promise: Promise<T>,
-  isActive: boolean
+  isActiveCheck: () => boolean
 ): Promise<T> {
   return new Promise<T>(async (resolve, reject) => {
     const checkInterval = setInterval(() => {
-      if (!isActive) {
+      if (!isActiveCheck()) {
         clearInterval(checkInterval);
         reject(new Error("Grep operation was stopped"));
       }

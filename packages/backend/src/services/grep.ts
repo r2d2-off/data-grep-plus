@@ -6,6 +6,10 @@ import { buildRegexFilter, executeQueryWithCancellationCheck, extractMatches } f
 // Track if a grep operation is currently running
 let isGrepActive = false;
 
+// Keep track of ongoing operations to ensure they have completed
+let stopPromise: Promise<void> | null = null;
+let stopResolve: (() => void) | null = null;
+
 // Store for grep matches
 const grepStore = {
   matches: new Set<string>(),
@@ -33,6 +37,11 @@ export const grepService = {
       return { error: "A grep scan is already running" };
     }
 
+    // Wait for any pending stop operation to complete
+    if (stopPromise) {
+      await stopPromise;
+    }
+
     try {
       isGrepActive = true;
       grepStore.clear();
@@ -57,7 +66,19 @@ export const grepService = {
       };
     }
 
+    if (!stopPromise) {
+      stopPromise = new Promise<void>((resolve) => {
+        stopResolve = resolve;
+      });
+    }
+
     isGrepActive = false;
+
+    await stopPromise;
+
+    stopPromise = null;
+    stopResolve = null;
+
     return {
       data: { success: true, message: "Grep scan stopped successfully" },
     };
@@ -109,7 +130,14 @@ export const grepService = {
         Number(lastRequestId)
       );
     } catch (error) {
+      if (stopResolve) {
+        stopResolve();
+      }
       throw error;
+    }
+
+    if (stopResolve) {
+      stopResolve();
     }
 
     return {
@@ -161,9 +189,12 @@ export const grepService = {
 
       // Execute the query with cancellation check
       const queryPromise = query.execute();
-      const result = await executeQueryWithCancellationCheck(queryPromise, isGrepActive);
+      const result = await executeQueryWithCancellationCheck(queryPromise, () => isGrepActive);
 
       if (!isGrepActive) {
+        if (stopResolve) {
+          stopResolve();
+        }
         throw new Error("Grep operation was stopped");
       }
 
@@ -173,6 +204,9 @@ export const grepService = {
       // Process each result
       for (const item of result.items) {
         if (!isGrepActive) {
+          if (stopResolve) {
+            stopResolve();
+          }
           throw new Error("Grep operation was stopped");
         }
 

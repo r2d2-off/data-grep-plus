@@ -14,7 +14,7 @@ const isExporting = ref(false);
 const isCopying = ref(false);
 const sdk = useSDK();
 
-const { downloadResults } = useGrepRepository();
+const { downloadResults, stopGrep } = useGrepRepository();
 
 const hasResults = computed(
   () => store.searchResults && store.searchResults?.length > 0
@@ -65,7 +65,7 @@ const exportToFile = async () => {
 const stopSearch = async () => {
   isStoppingSearch.value = true;
   try {
-    await store.stopGrepSearch();
+    await stopGrep();
   } catch (error) {
     console.error("Failed to stop grep:", error);
     sdk.window.showToast("Failed to stop search", { variant: "error" });

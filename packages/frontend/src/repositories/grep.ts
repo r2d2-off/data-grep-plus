@@ -1,5 +1,6 @@
 import { useSDK } from "@/plugins/sdk";
 import type { GrepOptions } from "shared";
+
 export const useGrepRepository = () => {
   const sdk = useSDK();
 
@@ -34,19 +35,26 @@ export const useGrepRepository = () => {
   };
 
   const searchGrepRequests = async (pattern: string, options: GrepOptions) => {
+    let cancelled = false;
+
     const { error, matchesCount } = await sdk.backend.grepRequests(
       pattern,
       options
     );
+
     if (error) {
-      console.error("Failed to search requests:", error);
-      sdk.window.showToast(error, {
-        variant: "error",
-      });
-      return;
+      if (error === "Grep operation was stopped") {
+        cancelled = true;
+      } else {
+        console.error("Failed to search requests:", error);
+        sdk.window.showToast(error, {
+          variant: "error",
+        });
+        return { matchesCount: 0, cancelled };
+      }
     }
 
-    return matchesCount;
+    return { matchesCount, cancelled };
   };
 
   return {

@@ -35,7 +35,7 @@ export const useGrepStore = defineStore("grep", () => {
     uniqueMatchesCount.value = 0;
 
     try {
-      const matchesCount = await grepRepository.searchGrepRequests(
+      const { matchesCount, cancelled } = await grepRepository.searchGrepRequests(
         pattern.value,
         {
           includeRequests: includeRequests.value,
@@ -48,6 +48,10 @@ export const useGrepStore = defineStore("grep", () => {
           cleanupOutput: cleanupOutput.value,
         }
       );
+
+      if (cancelled) {
+        return;
+      }
 
       if (!matchesCount) {
         sdk.window.showToast("No results found", {
@@ -76,28 +80,6 @@ export const useGrepStore = defineStore("grep", () => {
     }
   };
 
-  const stopGrepSearch = async () => {
-    try {
-      const { error } = await sdk.backend.stopGrep();
-      if (error) {
-        console.error("Failed to stop grep:", error);
-        sdk.window.showToast("Failed to stop search: " + error, {
-          variant: "error",
-        });
-        return;
-      }
-
-      sdk.window.showToast("Search stopped successfully", {
-        variant: "info",
-      });
-    } catch (error) {
-      sdk.window.showToast("Failed to stop search: " + error, {
-        variant: "error",
-      });
-    } finally {
-      isSearching.value = false;
-    }
-  };
 
   sdk.backend.onEvent("caidogrep:progress", (value: number) => {
     progress.value = value;
@@ -107,10 +89,18 @@ export const useGrepStore = defineStore("grep", () => {
     if (typeof matches === "number") {
       uniqueMatchesCount.value += matches;
     } else {
-      searchResults.value = [
+      const newResults = [
         ...(searchResults.value || []),
         ...Array.from(matches),
       ];
+
+      if (newResults.length >= 25000) {
+        const truncatedResults = newResults.slice(0, 25000);
+        truncatedResults.push("!!! Results truncated to 25K. Export to view more");
+        searchResults.value = truncatedResults;
+      } else {
+        searchResults.value = newResults;
+      }
 
       uniqueMatchesCount.value += matches.length;
     }
@@ -132,6 +122,5 @@ export const useGrepStore = defineStore("grep", () => {
     cleanupOutput,
 
     searchGrepRequests,
-    stopGrepSearch,
   };
 });
