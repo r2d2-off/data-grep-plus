@@ -18,4 +18,5 @@ export interface GrepResults {
   searchResults: string[] | null;
   uniqueMatchesCount: number;
   searchTime: number;
+  cancelled: boolean;
 }
