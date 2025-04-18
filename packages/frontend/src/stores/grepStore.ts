@@ -106,9 +106,17 @@ export const useGrepStore = defineStore("grep", () => {
     }
   };
 
-  const matchesText = computed((): string => {
-    if (!searchResults.value) return "";
-    return searchResults.value.join("\n");
+  const uniqueMatches = computed((): string[] => {
+    if (!searchResults.value) return [];
+    const uniqueSet = new Set(searchResults.value);
+    const results = Array.from(uniqueSet);
+    if (results.length > 25000) {
+      return [
+        ...results.slice(0, 25000),
+        "Results truncated to 25K matches. Export to retrieve all results.",
+      ];
+    }
+    return results;
   });
 
   const uniqueMatchesCount = computed((): number => {
@@ -136,7 +144,7 @@ export const useGrepStore = defineStore("grep", () => {
     matchGroup,
     onlyInScope,
     searchResults,
-    matchesText,
+    uniqueMatches,
     uniqueMatchesCount,
     progress,
     customHTTPQL,

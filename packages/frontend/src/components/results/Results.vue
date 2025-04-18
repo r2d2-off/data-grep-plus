@@ -4,7 +4,7 @@ import { useGrepStore } from "@/stores";
 import { copyToClipboard } from "@/utils/clipboard";
 import Button from "primevue/button";
 import Card from "primevue/card";
-import Textarea from "primevue/textarea";
+import VirtualScroller from "primevue/virtualscroller";
 import { ref } from "vue";
 
 const store = useGrepStore();
@@ -12,9 +12,11 @@ const sdk = useSDK();
 const isStoppingSearch = ref(false);
 
 const exportToFile = () => {
-  if (!store.matchesText) return;
+  if (!store.uniqueMatches) return;
 
-  const blob = new Blob([store.matchesText], { type: "text/plain" });
+  const blob = new Blob([store.uniqueMatches.join("\n")], {
+    type: "text/plain",
+  });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -51,8 +53,7 @@ const stopSearch = async () => {
           <span class="text-xl font-semibold">
             <i class="fas fa-list mr-2"></i>
             <template v-if="store.searchResults">
-              Matches ({{ store.searchResults.length }} requests,
-              {{ store.uniqueMatchesCount }} matches)
+              Matches ({{ store.uniqueMatchesCount }} matches)
             </template>
             <template v-else-if="store.isSearching"> Searching... </template>
           </span>
@@ -68,26 +69,42 @@ const stopSearch = async () => {
           </div>
         </div>
         <div class="flex flex-col gap-4 h-full">
-          <Textarea
-            :value="store.matchesText"
-            readonly
-            class="w-full h-full font-mono text-sm"
-            placeholder="No matches found..."
-          />
+          <VirtualScroller
+            v-if="store.uniqueMatches?.length"
+            :items="store.uniqueMatches"
+            :itemSize="24"
+            class="w-full h-full border border-gray-700"
+            scrollHeight="100%"
+          >
+            <template #item="{ item }">
+              <div class="p-1 bg-zinc-900/30 transition-colors select-text">
+                {{ item }}
+              </div>
+            </template>
+            <template #content="{ items, loading }">
+              <div v-if="!items.length && !loading" class="p-4 text-gray-400">
+                No matches found...
+              </div>
+            </template>
+          </VirtualScroller>
+          <div v-else class="p-4 text-gray-400">No matches found...</div>
+
           <div class="flex justify-start gap-2">
             <Button
               label="Copy All Matches"
               icon="fas fa-copy"
               class="p-button-outlined"
-              @click="copyToClipboard(sdk, store.matchesText)"
-              :disabled="!store.matchesText"
+              @click="
+                copyToClipboard(sdk, store.searchResults?.join('\n') || '')
+              "
+              :disabled="!store.searchResults"
             />
             <Button
               label="Export"
               icon="fas fa-download"
               class="p-button-outlined"
               @click="exportToFile"
-              :disabled="!store.matchesText"
+              :disabled="!store.searchResults"
             />
             <Button
               v-if="store.isSearching"
@@ -97,7 +114,7 @@ const stopSearch = async () => {
               icon="fas fa-stop"
               :loading="isStoppingSearch"
               @click="stopSearch"
-              />
+            />
           </div>
         </div>
       </div>

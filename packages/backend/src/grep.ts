@@ -104,6 +104,26 @@ async function executeGrepSearch(
  */
 function buildRegexFilter(regex: RegExp, options: GrepOptions) {
   const { includeRequests, includeResponses, customHTTPQL } = options;
+  const CLEANUP_EXTENSIONS = [
+    "%.apng",
+    "%.avif",
+    "%.gif",
+    "%.jpg",
+    "%.jpeg",
+    "%.pjpeg",
+    "%.pjp",
+    "%.png",
+    "%.svg",
+    "%.webp",
+    "%.bmp",
+    "%.ico",
+    "%.cur",
+    "%.tif",
+    "%.tiff",
+    "%.mp4",
+    "%.mp3",
+    "%.ttf",
+  ];
 
   const escapedRegexStr = regex.source
     .replace(/\\/g, "\\\\")
@@ -136,9 +156,12 @@ function buildRegexFilter(regex: RegExp, options: GrepOptions) {
     regexFilter = `${regexFilter} and resp.len.lt:104857600`;
   }
 
+  for (const ext of CLEANUP_EXTENSIONS) {
+    regexFilter = `${regexFilter} and req.ext.nlike:"${ext}"`;
+  }
+
   return regexFilter;
 }
-
 /**
  * Fetches requests in batches and processes them to find matches
  */
@@ -188,6 +211,9 @@ async function fetchAndProcessRequests(
       throw new Error("Grep operation was stopped");
     }
 
+    // Collect all new matches for this page
+    const pageUniqueNewMatches = new Set<string>();
+
     // Process each result
     for (const item of result.items) {
       if (!isGrepActive) {
@@ -213,8 +239,6 @@ async function fetchAndProcessRequests(
         includeResponses
       );
       if (newMatches.length > 0) {
-        const uniqueNewMatches = new Set<string>();
-
         for (const content of newMatches) {
           let processedContent = content.trim();
 
@@ -224,17 +248,17 @@ async function fetchAndProcessRequests(
 
           if (!matches.has(processedContent)) {
             matches.add(processedContent);
-            uniqueNewMatches.add(processedContent);
+            pageUniqueNewMatches.add(processedContent);
             if (maxResults && matches.size >= maxResults) {
               break;
             }
           }
         }
-
-        if (uniqueNewMatches.size > 0) {
-          sdk.api.send("caidogrep:matches", Array.from(uniqueNewMatches));
-        }
       }
+    }
+
+    if (pageUniqueNewMatches.size > 0) {
+      sdk.api.send("caidogrep:matches", Array.from(pageUniqueNewMatches));
     }
 
     // Setup for next page if available
@@ -320,13 +344,11 @@ function extractMatches(
 ): string[] {
   if (!text) return [];
 
-  const matches = Array.from(text.matchAll(new RegExp(regex, 'g')));
+  const matches = Array.from(text.matchAll(new RegExp(regex, "g")));
   if (!matches.length) return [];
 
-  return matches.map(match =>
-    matchGroup !== null && match[matchGroup]
-      ? match[matchGroup]
-      : match[0]
+  return matches.map((match) =>
+    matchGroup !== null && match[matchGroup] ? match[matchGroup] : match[0]
   );
 }
 
