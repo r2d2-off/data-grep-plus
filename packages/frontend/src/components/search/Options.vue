@@ -4,9 +4,31 @@ import { useMediaQuery } from "@vueuse/core";
 import Checkbox from "primevue/checkbox";
 import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
+import { computed } from "vue";
 
 const grepStore = useGrepStore();
 const isSmallScreen = useMediaQuery("(max-width: 900px)");
+
+const matchGroupsString = computed({
+  get: () => {
+    if (!grepStore.options.matchGroups) return "";
+    return grepStore.options.matchGroups.join(",");
+  },
+  set: (value: string) => {
+    if (!value) {
+      grepStore.options.matchGroups = null;
+      return;
+    }
+
+    const groups = value.split(",")
+      .map(g => g.trim())
+      .filter(g => g !== "")
+      .map(g => parseInt(g))
+      .filter(g => !isNaN(g));
+
+    grepStore.options.matchGroups = groups.length ? groups : null;
+  }
+});
 </script>
 
 <template>
@@ -85,19 +107,17 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
     <div class="flex flex-wrap gap-6">
       <div>
         <label class="block mb-2.5 font-medium">
-          Match Group
+          Match Groups
           <i
             class="fas fa-info-circle ml-1 text-gray-500"
             v-tooltip.right="
-              'Extract specific group from regex match. Leave empty to extract entire match'
+              'Extract specific groups from regex match. Separate groups with commas. Leave empty to extract entire match'
             "
           ></i>
         </label>
-        <InputNumber
-          v-model="grepStore.options.matchGroup"
-          :min="0"
-          :max="99"
-          placeholder="Match group (optional)"
+        <InputText
+          v-model="matchGroupsString"
+          placeholder="0,1,2 (optional)"
           class="w-full"
         />
       </div>
@@ -115,8 +135,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
         <InputNumber
           v-model="grepStore.options.maxResults"
           :min="1"
-          :max="1000"
-          placeholder="Unlimited"
+          placeholder="1000"
           class="w-full"
         />
       </div>
@@ -131,7 +150,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
         </label>
         <InputText
           v-model="grepStore.options.customHTTPQL"
-          placeholder="Custom HTTPQL"
+          placeholder='req.ext.eq:".html"'
           class="w-full"
         />
       </div>

@@ -15,7 +15,7 @@ export const useGrepStore = defineStore("grep", () => {
     includeRequests: true,
     includeResponses: true,
     maxResults: null,
-    matchGroup: null,
+    matchGroups: null,
     onlyInScope: true,
     customHTTPQL: null,
     skipLargeResponses: true,

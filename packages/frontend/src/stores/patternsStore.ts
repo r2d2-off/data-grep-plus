@@ -6,6 +6,7 @@ interface PredefinedPattern {
   name: string;
   pattern: string;
   description: string;
+  matchGroups?: number[];
 }
 
 export const usePatternsStore = defineStore("patterns", () => {
@@ -18,37 +19,38 @@ export const usePatternsStore = defineStore("patterns", () => {
     {
       name: "Email",
       pattern: "[\\w.-]+@[\\w.-]+\\.\\w+",
-      description: "Matches email addresses"
+      description: "Matches email addresses",
     },
     {
       name: "URL",
       pattern: "https?://[\\w.-]+(?:\\.[a-zA-Z]{2,})+[\\w/.-]*",
-      description: "Matches HTTP/HTTPS URLs"
+      description: "Matches HTTP/HTTPS URLs",
     },
     {
       name: "IP Address",
       pattern: "(?:[0-9]{1,3}\\.){3}[0-9]{1,3}",
-      description: "Matches IPv4 addresses"
+      description: "Matches IPv4 addresses",
     },
     {
       name: "JSON Object",
       pattern: "\\{[^}]*\\}",
-      description: "Matches simple JSON objects"
+      description: "Matches simple JSON objects",
     },
     {
       name: "AWS Keys",
       pattern: "AKIA[0-9A-Z]{16}",
-      description: "Matches AWS access key IDs"
+      description: "Matches AWS access key IDs",
     },
     {
       name: "JWT Tokens",
       pattern: "eyJ[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]*",
-      description: "Matches JWT tokens"
+      description: "Matches JWT tokens",
     },
     {
       name: "Strings",
-      pattern: "'.*?'|\".*?\"|`.*?`",
-      description: "Matches strings"
+      pattern: "'(.*?)'|\"(.*?)\"|`(.*?)`",
+      description: "Matches strings",
+      matchGroups: [1,2,3],
     },
   ];
 
@@ -63,6 +65,7 @@ export const usePatternsStore = defineStore("patterns", () => {
 
   function applyPattern(pattern: PredefinedPattern) {
     grepStore.pattern = pattern.pattern;
+    grepStore.options.matchGroups = pattern.matchGroups || null;
     closeDialog();
   }
 
@@ -77,6 +80,6 @@ export const usePatternsStore = defineStore("patterns", () => {
     openDialog,
     closeDialog,
     applyPattern,
-    updateScrollPosition
+    updateScrollPosition,
   };
 });

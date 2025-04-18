@@ -65,21 +65,41 @@ export function buildRegexFilter(regex: RegExp, options: GrepOptions): string {
 }
 
 /**
- * Extract all matches from a string based on the regex and matchGroup
+ * Extract all matches from a string based on the regex and matchGroups
  */
 export function extractMatches(
   text: string,
   regex: RegExp,
-  matchGroup: number | null
+  matchGroups: number[] | null
 ): string[] {
   if (!text) return [];
 
   const matches = Array.from(text.matchAll(new RegExp(regex, "g")));
   if (!matches.length) return [];
 
-  return matches.map((match) =>
-    matchGroup !== null && match[matchGroup] ? match[matchGroup] : match[0]
-  );
+  const results: string[] = [];
+
+  for (const match of matches) {
+    if (!matchGroups || matchGroups.length === 0) {
+      results.push(match[0]);
+      continue;
+    }
+
+    let foundMatch = false;
+    for (const groupIndex of matchGroups) {
+      if (match[groupIndex] !== undefined) {
+        results.push(match[groupIndex]);
+        foundMatch = true;
+        break;
+      }
+    }
+
+    if (!foundMatch) {
+      results.push(match[0]);
+    }
+  }
+
+  return results;
 }
 
 /**

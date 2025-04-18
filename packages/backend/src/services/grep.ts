@@ -1,7 +1,11 @@
 import type { Request, RequestsQuery, Response } from "caido:utils";
 import type { GrepOptions } from "shared";
 import type { CaidoBackendSDK } from "../types";
-import { buildRegexFilter, executeQueryWithCancellationCheck, extractMatches } from "../utils/grep";
+import {
+  buildRegexFilter,
+  executeQueryWithCancellationCheck,
+  extractMatches,
+} from "../utils/grep";
 
 // Track if a grep operation is currently running
 let isGrepActive = false;
@@ -21,7 +25,7 @@ const grepStore = {
   },
   getMatches() {
     return Array.from(this.matches);
-  }
+  },
 };
 
 export const grepService = {
@@ -32,7 +36,10 @@ export const grepService = {
     sdk: CaidoBackendSDK,
     pattern: string,
     options: GrepOptions
-  ): Promise<{ data?: { matchesCount?: number, timeTaken?: number }; error?: string }> {
+  ): Promise<{
+    data?: { matchesCount?: number; timeTaken?: number };
+    error?: string;
+  }> {
     if (isGrepActive) {
       return { error: "A grep scan is already running" };
     }
@@ -162,7 +169,7 @@ export const grepService = {
       includeRequests = true,
       includeResponses = true,
       maxResults,
-      matchGroup = null,
+      matchGroups = [0],
       onlyInScope = true,
     } = options;
 
@@ -192,7 +199,10 @@ export const grepService = {
 
       // Execute the query with cancellation check
       const queryPromise = query.execute();
-      const result = await executeQueryWithCancellationCheck(queryPromise, () => isGrepActive);
+      const result = await executeQueryWithCancellationCheck(
+        queryPromise,
+        () => isGrepActive
+      );
 
       if (!isGrepActive) {
         if (stopResolve) {
@@ -227,7 +237,7 @@ export const grepService = {
           item.request,
           item.response,
           regex,
-          matchGroup,
+          matchGroups,
           includeRequests,
           includeResponses
         );
@@ -237,7 +247,14 @@ export const grepService = {
             let processedContent = content.trim();
 
             // Skip matches with non-printable characters if cleanup is enabled
-            if (options.cleanupOutput && /[^\x20-\x7E]/.test(processedContent)) {
+            if (
+              options.cleanupOutput &&
+              /[^\x20-\x7E]/.test(processedContent)
+            ) {
+              continue;
+            }
+
+            if (processedContent.length === 0) {
               continue;
             }
 
@@ -278,7 +295,7 @@ export const grepService = {
     request: Request,
     response: Response | undefined,
     regex: RegExp,
-    matchGroup: number | null,
+    matchGroups: number[] | null,
     includeRequests: boolean,
     includeResponses: boolean
   ): string[] {
@@ -288,7 +305,7 @@ export const grepService = {
       const rawMatches = extractMatches(
         request.getRaw()?.toText() || "",
         regex,
-        matchGroup
+        matchGroups
       );
       if (rawMatches) {
         contentMatches.push(...rawMatches);
@@ -299,7 +316,7 @@ export const grepService = {
       const responseRawMatches = extractMatches(
         response.getRaw()?.toText() || "",
         regex,
-        matchGroup
+        matchGroups
       );
 
       if (responseRawMatches) {
@@ -319,5 +336,5 @@ export const grepService = {
     const requests = sdk.requests.query().last(1);
     const result = await requests.execute();
     return result.items[0]?.request.getId() || null;
-  }
+  },
 };

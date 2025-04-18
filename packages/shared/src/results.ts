@@ -2,7 +2,7 @@ export interface GrepOptions {
   includeRequests: boolean;
   includeResponses: boolean;
   maxResults: number | null;
-  matchGroup: number | null;
+  matchGroups: number[] | null;
   onlyInScope: boolean;
   skipLargeResponses: boolean;
   customHTTPQL: string | null;
