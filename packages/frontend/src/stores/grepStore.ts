@@ -13,7 +13,6 @@ export const useGrepStore = defineStore("grep", () => {
   const matchGroup = ref<number | null>(null);
   const onlyInScope = ref(true);
   const progress = ref(0);
-
   const searchResults = ref<string[] | null>(null);
 
   const searchGrepRequests = async () => {
@@ -103,10 +102,7 @@ export const useGrepStore = defineStore("grep", () => {
 
   const matchesText = computed((): string => {
     if (!searchResults.value) return "";
-
-    const matches = searchResults.value.map((match) => match);
-
-    return matches.join("\n");
+    return searchResults.value.join("\n");
   });
 
   const uniqueMatchesCount = computed((): number => {
