@@ -99,6 +99,34 @@ async function executeGrepSearch(
     data: Array.from(matches),
   };
 }
+
+
+function buildRegexFilter(regex: RegExp, options: GrepOptions) {
+  const { includeRequests, includeResponses, customHTTPQL } = options;
+
+  const escapedRegexStr = regex.source
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
+
+  let regexFilter = "";
+  const filters = [];
+
+  if (includeRequests) {
+    filters.push(`req.raw.regex:"${escapedRegexStr}"`);
+  }
+
+  if (includeResponses) {
+    filters.push(`resp.raw.regex:"${escapedRegexStr}"`);
+  }
+
+  regexFilter = filters.join(" or ");
+
+  if (customHTTPQL) {
+    regexFilter = `${customHTTPQL} and (${regexFilter})`;
+  }
+
+  return regexFilter;
+}
 /**
  * Fetches requests in batches and processes them to find matches
  */
@@ -117,13 +145,8 @@ async function fetchAndProcessRequests(
     onlyInScope = true,
   } = options;
 
-  // Escape special characters in regex for the query
-  const escapedRegexStr = regex.source
-    .replace(/\\/g, "\\\\")
-    .replace(/"/g, '\\"');
-  const regexFilter = `resp.raw.regex:"${escapedRegexStr}" or req.raw.regex:"${escapedRegexStr}"`;
+  const regexFilter = buildRegexFilter(regex, options);
 
-  let matchCount = 0;
   let hasNextPage = true;
   let after: string | undefined = undefined;
   let processedRequestID = 0;
@@ -131,7 +154,7 @@ async function fetchAndProcessRequests(
 
   while (
     hasNextPage &&
-    (!maxResults || matchCount < maxResults) &&
+    (!maxResults || matches.size < maxResults) &&
     isGrepActive
   ) {
     const progress = Math.min(
@@ -161,7 +184,7 @@ async function fetchAndProcessRequests(
 
       processedRequestID = Number(item.request.getId());
 
-      if (maxResults && matchCount >= maxResults) break;
+      if (maxResults && matches.size >= maxResults) break;
 
       if (onlyInScope && !sdk.requests.inScope(item.request)) {
         continue;
@@ -177,19 +200,19 @@ async function fetchAndProcessRequests(
       );
 
       if (newMatches.length > 0) {
-        const uniqueNewMatches = newMatches.filter((match) => {
-          const trimmed = match.trim();
-          return !matches.has(trimmed);
-        });
+        const uniqueNewMatches = new Set<string>();
 
         for (const content of newMatches) {
-          matches.add(content.trim());
-          matchCount++;
-          if (maxResults && matchCount >= maxResults) break;
+          const trimmed = content.trim();
+          if (!matches.has(trimmed)) {
+            matches.add(trimmed);
+            uniqueNewMatches.add(trimmed);
+            if (maxResults && matches.size >= maxResults) break;
+          }
         }
 
-        if (uniqueNewMatches.length > 0) {
-          sdk.api.send("caidogrep:matches", uniqueNewMatches);
+        if (uniqueNewMatches.size > 0) {
+          sdk.api.send("caidogrep:matches", Array.from(uniqueNewMatches));
         }
       }
     }
