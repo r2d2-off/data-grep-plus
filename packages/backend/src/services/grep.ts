@@ -303,7 +303,9 @@ export const grepService = {
       );
 
       if (responseRawMatches) {
-        contentMatches.push(...responseRawMatches);
+        for (const match of responseRawMatches) {
+          contentMatches.push(match);
+        }
       }
     }
 
