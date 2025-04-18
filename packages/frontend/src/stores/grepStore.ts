@@ -38,6 +38,10 @@ export const useGrepStore = defineStore("grep", () => {
       });
 
       if (error) {
+        if (error === "Grep operation was stopped") {
+          return;
+        }
+
         sdk.window.showToast(error, {
           variant: "error",
         });
@@ -66,6 +70,23 @@ export const useGrepStore = defineStore("grep", () => {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
       sdk.window.showToast("Failed to search requests: " + errorMessage, {
+        variant: "error",
+      });
+    } finally {
+      isSearching.value = false;
+    }
+  };
+
+  const stopGrepSearch = async () => {
+    try {
+      await sdk.backend.stopGrep();
+      sdk.window.showToast("Search stopped successfully", {
+        variant: "info",
+      });
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      sdk.window.showToast("Failed to stop search: " + errorMessage, {
         variant: "error",
       });
     } finally {
@@ -109,6 +130,7 @@ export const useGrepStore = defineStore("grep", () => {
     matchesText,
     uniqueMatchesCount,
     searchGrepRequests,
+    stopGrepSearch,
     progress,
   };
 });

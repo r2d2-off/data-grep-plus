@@ -33,14 +33,6 @@ export const grepRequests = async (
     isGrepActive = true;
     return await executeGrepSearch(sdk, pattern, options);
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "Grep operation was stopped"
-    ) {
-      return {
-        data: [],
-      };
-    }
     return { error: error instanceof Error ? error.message : String(error) };
   } finally {
     isGrepActive = false;
@@ -100,14 +92,6 @@ async function executeGrepSearch(
       Number(lastRequestId)
     );
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message === "Grep operation was stopped"
-    ) {
-      return {
-        data: [],
-      };
-    }
     throw error;
   }
 
@@ -193,7 +177,7 @@ async function fetchAndProcessRequests(
       );
 
       if (newMatches.length > 0) {
-        const uniqueNewMatches = newMatches.filter(match => {
+        const uniqueNewMatches = newMatches.filter((match) => {
           const trimmed = match.trim();
           return !matches.has(trimmed);
         });

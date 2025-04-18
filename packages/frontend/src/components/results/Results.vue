@@ -5,9 +5,11 @@ import { copyToClipboard } from "@/utils/clipboard";
 import Button from "primevue/button";
 import Card from "primevue/card";
 import Textarea from "primevue/textarea";
+import { ref } from "vue";
 
 const store = useGrepStore();
 const sdk = useSDK();
+const isStoppingSearch = ref(false);
 
 const exportToFile = () => {
   if (!store.matchesText) return;
@@ -21,6 +23,17 @@ const exportToFile = () => {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+};
+
+const stopSearch = async () => {
+  isStoppingSearch.value = true;
+  try {
+    await store.stopGrepSearch();
+  } catch (error) {
+    console.error("Failed to stop grep:", error);
+  } finally {
+    isStoppingSearch.value = false;
+  }
 };
 </script>
 
@@ -43,7 +56,7 @@ const exportToFile = () => {
             </template>
             <template v-else-if="store.isSearching"> Searching... </template>
           </span>
-          <div class="text-sm text-gray-500 flex items-center">
+          <div class="text-sm text-gray-500 flex items-center gap-2">
             <template v-if="store.isSearching">
               <div class="shimmer">Searching {{ store.progress }}%</div>
             </template>
@@ -76,6 +89,15 @@ const exportToFile = () => {
               @click="exportToFile"
               :disabled="!store.matchesText"
             />
+            <Button
+              v-if="store.isSearching"
+              severity="danger"
+              size="small"
+              label="Stop"
+              icon="fas fa-stop"
+              :loading="isStoppingSearch"
+              @click="stopSearch"
+              />
           </div>
         </div>
       </div>
