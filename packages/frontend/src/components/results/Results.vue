@@ -1,30 +1,65 @@
 <script setup lang="ts">
 import { useSDK } from "@/plugins/sdk";
+import { useGrepRepository } from "@/repositories/grep";
 import { useGrepStore } from "@/stores";
 import { copyToClipboard } from "@/utils/clipboard";
 import Button from "primevue/button";
 import Card from "primevue/card";
 import VirtualScroller from "primevue/virtualscroller";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 const store = useGrepStore();
-const sdk = useSDK();
 const isStoppingSearch = ref(false);
+const isExporting = ref(false);
+const isCopying = ref(false);
+const sdk = useSDK();
 
-const exportToFile = () => {
-  if (!store.uniqueMatches) return;
+const { downloadResults } = useGrepRepository();
 
-  const blob = new Blob([store.uniqueMatches.join("\n")], {
-    type: "text/plain",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "grep-matches.txt";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+const hasResults = computed(
+  () => store.searchResults && store.searchResults?.length > 0
+);
+
+const copyAllMatches = async () => {
+  if (!hasResults.value) return;
+
+  isCopying.value = true;
+  try {
+    const data = await downloadResults();
+    if (!data || data.length === 0) return;
+
+    copyToClipboard(sdk, data.join("\n"));
+  } catch (error) {
+    console.error("Error copying matches:", error);
+    sdk.window.showToast("Error copying matches", { variant: "error" });
+  } finally {
+    isCopying.value = false;
+  }
+};
+
+const exportToFile = async () => {
+  if (!hasResults.value) return;
+
+  isExporting.value = true;
+  try {
+    const data = await downloadResults();
+    if (!data || data.length === 0) return;
+
+    const blob = new Blob([data.join("\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `grep-matches-${new Date().getTime()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error exporting results:", error);
+    sdk.window.showToast("Error exporting results", { variant: "error" });
+  } finally {
+    isExporting.value = false;
+  }
 };
 
 const stopSearch = async () => {
@@ -33,6 +68,7 @@ const stopSearch = async () => {
     await store.stopGrepSearch();
   } catch (error) {
     console.error("Failed to stop grep:", error);
+    sdk.window.showToast("Failed to stop search", { variant: "error" });
   } finally {
     isStoppingSearch.value = false;
   }
@@ -70,8 +106,8 @@ const stopSearch = async () => {
         </div>
         <div class="flex flex-col gap-4 h-full">
           <VirtualScroller
-            v-if="store.uniqueMatches?.length"
-            :items="store.uniqueMatches"
+            v-if="store.searchResults?.length"
+            :items="store.searchResults"
             :itemSize="24"
             class="w-full h-full border border-gray-700"
             scrollHeight="100%"
@@ -94,17 +130,17 @@ const stopSearch = async () => {
               label="Copy All Matches"
               icon="fas fa-copy"
               class="p-button-outlined"
-              @click="
-                copyToClipboard(sdk, store.searchResults?.join('\n') || '')
-              "
-              :disabled="!store.searchResults"
+              @click="copyAllMatches"
+              :loading="isCopying"
+              :disabled="!hasResults"
             />
             <Button
               label="Export"
               icon="fas fa-download"
               class="p-button-outlined"
               @click="exportToFile"
-              :disabled="!store.searchResults"
+              :loading="isExporting"
+              :disabled="!hasResults"
             />
             <Button
               v-if="store.isSearching"

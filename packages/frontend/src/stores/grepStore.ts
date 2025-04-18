@@ -1,6 +1,7 @@
 import { useSDK } from "@/plugins/sdk";
+import { useGrepRepository } from "@/repositories/grep";
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { ref } from "vue";
 
 export const useGrepStore = defineStore("grep", () => {
   const sdk = useSDK();
@@ -17,6 +18,8 @@ export const useGrepStore = defineStore("grep", () => {
   const customHTTPQL = ref<string | null>(null);
   const skipLargeResponses = ref(true);
   const cleanupOutput = ref(false);
+  const uniqueMatchesCount = ref(0);
+  const grepRepository = useGrepRepository();
 
   const searchGrepRequests = async () => {
     if (!pattern.value.trim()) {
@@ -29,46 +32,36 @@ export const useGrepStore = defineStore("grep", () => {
     searchResults.value = null;
     isSearching.value = true;
     progress.value = 0;
+    uniqueMatchesCount.value = 0;
 
     try {
-      const { error, data } = await sdk.backend.grepRequests(pattern.value, {
-        includeRequests: includeRequests.value,
-        includeResponses: includeResponses.value,
-        maxResults: maxResults.value ?? null,
-        matchGroup: matchGroup.value ?? null,
-        onlyInScope: onlyInScope.value,
-        customHTTPQL: customHTTPQL.value ?? null,
-        skipLargeResponses: skipLargeResponses.value,
-        cleanupOutput: cleanupOutput.value,
-      });
-
-      if (error) {
-        if (error === "Grep operation was stopped") {
-          return;
+      const matchesCount = await grepRepository.searchGrepRequests(
+        pattern.value,
+        {
+          includeRequests: includeRequests.value,
+          includeResponses: includeResponses.value,
+          maxResults: maxResults.value ?? null,
+          matchGroup: matchGroup.value ?? null,
+          onlyInScope: onlyInScope.value,
+          customHTTPQL: customHTTPQL.value ?? null,
+          skipLargeResponses: skipLargeResponses.value,
+          cleanupOutput: cleanupOutput.value,
         }
+      );
 
-        console.error("Failed to search requests:", error);
-        sdk.window.showToast(error, {
-          variant: "error",
-        });
-        return;
-      }
-
-      if (!data) {
+      if (!matchesCount) {
         sdk.window.showToast("No results found", {
           variant: "info",
         });
         return;
       }
 
-      searchResults.value = data;
-
-      if (data.length === 0) {
+      if (matchesCount === 0) {
         sdk.window.showToast("No matches found for the pattern", {
           variant: "info",
         });
       } else {
-        sdk.window.showToast(`Found ${data.length} matching results`, {
+        sdk.window.showToast(`Found ${matchesCount} matching results`, {
           variant: "success",
         });
       }
@@ -106,33 +99,21 @@ export const useGrepStore = defineStore("grep", () => {
     }
   };
 
-  const uniqueMatches = computed((): string[] => {
-    if (!searchResults.value) return [];
-    const uniqueSet = new Set(searchResults.value);
-    const results = Array.from(uniqueSet);
-    if (results.length > 25000) {
-      return [
-        ...results.slice(0, 25000),
-        "Results truncated to 25K matches. Export to retrieve all results.",
-      ];
-    }
-    return results;
-  });
-
-  const uniqueMatchesCount = computed((): number => {
-    if (!searchResults.value) return 0;
-    return searchResults.value.length;
-  });
-
   sdk.backend.onEvent("caidogrep:progress", (value: number) => {
     progress.value = value;
   });
 
-  sdk.backend.onEvent("caidogrep:matches", (matches: Set<string>) => {
-    searchResults.value = [
-      ...(searchResults.value || []),
-      ...Array.from(matches),
-    ];
+  sdk.backend.onEvent("caidogrep:matches", (matches: number | string[]) => {
+    if (typeof matches === "number") {
+      uniqueMatchesCount.value += matches;
+    } else {
+      searchResults.value = [
+        ...(searchResults.value || []),
+        ...Array.from(matches),
+      ];
+
+      uniqueMatchesCount.value += matches.length;
+    }
   });
 
   return {
@@ -144,7 +125,6 @@ export const useGrepStore = defineStore("grep", () => {
     matchGroup,
     onlyInScope,
     searchResults,
-    uniqueMatches,
     uniqueMatchesCount,
     progress,
     customHTTPQL,

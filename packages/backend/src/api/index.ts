@@ -9,7 +9,7 @@ export const grepRequests = async (
   sdk: CaidoBackendSDK,
   pattern: string,
   options: GrepOptions
-): Promise<{ data?: string[]; error?: string }> => {
+): Promise<{ matchesCount?: number; error?: string }> => {
   return grepService.grepRequests(sdk, pattern, options);
 };
 

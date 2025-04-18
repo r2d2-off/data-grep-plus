@@ -28,7 +28,7 @@ export const grepService = {
     sdk: CaidoBackendSDK,
     pattern: string,
     options: GrepOptions
-  ): Promise<{ data?: string[]; error?: string }> {
+  ): Promise<{ matchesCount?: number; error?: string }> {
     if (isGrepActive) {
       return { error: "A grep scan is already running" };
     }
@@ -84,7 +84,7 @@ export const grepService = {
     sdk: CaidoBackendSDK,
     pattern: string,
     options: GrepOptions
-  ): Promise<{ data?: string[]; error?: string }> {
+  ): Promise<{ matchesCount?: number; error?: string }> {
     const project = await sdk.projects.getCurrent();
     if (!project) {
       return { error: "No project selected" };
@@ -113,7 +113,7 @@ export const grepService = {
     }
 
     return {
-      data: Array.from(matches),
+      matchesCount: matches.size,
     };
   },
 
