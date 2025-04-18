@@ -33,5 +33,3 @@ const store = useGrepStore();
     </template>
   </Card>
 </template>
-
-<style scoped></style>
