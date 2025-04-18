@@ -17,6 +17,4 @@
 Extract data from your requests and responses
 
 
-
-https://github.com/user-attachments/assets/3f3c370a-2263-4d27-8c2b-712532f0a625
-
+https://github.com/user-attachments/assets/ec936719-d67f-4eee-bd64-da6dc566b8ca
