@@ -39,5 +39,4 @@ export const init = (sdk: FrontendSDK) => {
   sdk.sidebar.registerItem("Data Grep", "/grep", {
     icon: "fas fa-search",
   });
-  sdk.navigation.goTo("/grep");
 };
