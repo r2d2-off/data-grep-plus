@@ -1,49 +1,49 @@
 <script setup lang="ts">
 import { useGrepStore } from "@/stores";
+import { useMediaQuery } from "@vueuse/core";
 import Checkbox from "primevue/checkbox";
 import InputNumber from "primevue/inputnumber";
+import InputText from "primevue/inputtext";
 
 const grepStore = useGrepStore();
+const isSmallScreen = useMediaQuery('(max-width: 900px)');
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div>
-      <div class="flex flex-col gap-3">
-        <div class="flex items-center">
-          <Checkbox
-            v-model="grepStore.includeRequests"
-            :binary="true"
-            inputId="includeRequests"
-          />
-          <label for="includeRequests" class="ml-3">Include Requests</label>
-        </div>
+  <div class="flex flex-row justify-between" :class="{ 'flex-col gap-4': isSmallScreen }">
+    <div class="flex flex-col gap-3">
+      <div class="flex items-center">
+        <Checkbox
+          v-model="grepStore.includeRequests"
+          :binary="true"
+          inputId="includeRequests"
+        />
+        <label for="includeRequests" class="ml-3">Include Requests</label>
+      </div>
 
-        <div class="flex items-center">
-          <Checkbox
-            v-model="grepStore.includeResponses"
-            :binary="true"
-            inputId="includeResponses"
-          />
-          <label for="includeResponses" class="ml-3">Include Responses</label>
-        </div>
+      <div class="flex items-center">
+        <Checkbox
+          v-model="grepStore.includeResponses"
+          :binary="true"
+          inputId="includeResponses"
+        />
+        <label for="includeResponses" class="ml-3">Include Responses</label>
+      </div>
 
-        <div class="flex items-center">
-          <Checkbox
-            v-model="grepStore.onlyInScope"
-            :binary="true"
-            inputId="onlyInScope"
-          />
-          <label for="onlyInScope" class="ml-3">Only In Scope</label>
-          <i
-            class="fas fa-info-circle ml-2 text-gray-500"
-            v-tooltip.right="'Only include requests that are in scope'"
-          ></i>
-        </div>
+      <div class="flex items-center">
+        <Checkbox
+          v-model="grepStore.onlyInScope"
+          :binary="true"
+          inputId="onlyInScope"
+        />
+        <label for="onlyInScope" class="ml-3">Only In Scope</label>
+        <i
+          class="fas fa-info-circle ml-2 text-gray-500"
+          v-tooltip.right="'Only include requests that are in scope'"
+        ></i>
       </div>
     </div>
-
-    <div class="flex gap-6">
+    <div class="flex flex-wrap gap-6">
       <div>
         <label class="block mb-2.5 font-medium">
           Match Group
@@ -78,6 +78,21 @@ const grepStore = useGrepStore();
           :min="1"
           :max="1000"
           placeholder="Unlimited"
+          class="w-full"
+        />
+      </div>
+
+      <div>
+        <label class="block mb-2.5 font-medium">
+          Custom HTTPQL
+          <i
+            class="fas fa-info-circle ml-1 text-gray-500"
+            v-tooltip.right="'Custom HTTPQL query to filter results'"
+          ></i>
+        </label>
+        <InputText
+          v-model="grepStore.customHTTPQL"
+          placeholder="Custom HTTPQL"
           class="w-full"
         />
       </div>
