@@ -12,9 +12,12 @@ const isStoppingSearch = ref(false);
 const stopSearch = async () => {
   isStoppingSearch.value = true;
   try {
-    await sdk.backend.stopGrep();
+    await store.stopGrepSearch();
   } catch (error) {
     console.error("Failed to stop grep:", error);
+    sdk.window.showToast("Failed to stop grep: " + error, {
+      variant: "error",
+    });
   } finally {
     isStoppingSearch.value = false;
   }

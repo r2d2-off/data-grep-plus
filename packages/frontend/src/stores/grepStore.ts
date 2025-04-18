@@ -42,6 +42,7 @@ export const useGrepStore = defineStore("grep", () => {
           return;
         }
 
+        console.error("Failed to search requests:", error);
         sdk.window.showToast(error, {
           variant: "error",
         });
@@ -79,14 +80,20 @@ export const useGrepStore = defineStore("grep", () => {
 
   const stopGrepSearch = async () => {
     try {
-      await sdk.backend.stopGrep();
+      const { error } = await sdk.backend.stopGrep();
+      if (error) {
+        console.error("Failed to stop grep:", error);
+        sdk.window.showToast("Failed to stop search: " + error, {
+          variant: "error",
+        });
+        return;
+      }
+
       sdk.window.showToast("Search stopped successfully", {
         variant: "info",
       });
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      sdk.window.showToast("Failed to stop search: " + errorMessage, {
+    } catch (error) {
+      sdk.window.showToast("Failed to stop search: " + error, {
         variant: "error",
       });
     } finally {
