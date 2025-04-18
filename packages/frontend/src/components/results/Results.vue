@@ -99,9 +99,12 @@ const stopSearch = async () => {
               <div class="shimmer">Searching {{ store.status.progress }}%</div>
             </template>
             <template
-              v-else-if="store.results.searchResults"
+              v-else-if="store.results.searchResults && !store.results.cancelled"
             >
               Scan finished in {{ formatTime(store.results.searchTime) }}
+            </template>
+            <template v-else-if="store.results.cancelled">
+              Scan cancelled
             </template>
           </div>
         </div>

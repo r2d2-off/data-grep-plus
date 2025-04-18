@@ -31,6 +31,7 @@ export const useGrepStore = defineStore("grep", () => {
     searchResults: null,
     uniqueMatchesCount: 0,
     searchTime: 0,
+    cancelled: false,
   });
 
   const searchGrepRequests = async () => {
@@ -53,6 +54,7 @@ export const useGrepStore = defineStore("grep", () => {
       results.searchTime = timeTaken ?? 0;
 
       if (cancelled) {
+        results.cancelled = true;
         return;
       }
 
