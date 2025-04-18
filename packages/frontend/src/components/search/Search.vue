@@ -10,7 +10,7 @@ const grepStore = useGrepStore();
     <label class="block mb-2.5 font-medium">Search Pattern (regex)</label>
     <InputText
       v-model="grepStore.pattern"
-      class="w-full h-10"
+      class="w-full h-12"
       placeholder="Enter a regex pattern to search for"
       v-tooltip.bottom="'Enter a regular expression to search for'"
     />

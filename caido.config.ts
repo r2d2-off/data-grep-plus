@@ -11,7 +11,7 @@ const id = "grep";
 export default defineConfig({
   id,
   name: "Data Grep",
-  description: "Search through your requests and responses data",
+  description: "Extract data from your requests and responses",
   version: "0.0.1",
   author: {
     name: "Caido Labs Inc.",

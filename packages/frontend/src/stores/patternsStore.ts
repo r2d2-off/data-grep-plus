@@ -17,12 +17,12 @@ export const usePatternsStore = defineStore("patterns", () => {
   const predefinedPatterns: PredefinedPattern[] = [
     {
       name: "Email",
-      pattern: "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+      pattern: "[\\w.-]+@[\\w.-]+\\.\\w+",
       description: "Matches email addresses"
     },
     {
       name: "URL",
-      pattern: "https?://[\\w.-]+\\.[a-zA-Z]{2,}[\\w/.-]*",
+      pattern: "https?://[\\w.-]+(?:\\.[a-zA-Z]{2,})+[\\w/.-]*",
       description: "Matches HTTP/HTTPS URLs"
     },
     {

@@ -1,7 +1,8 @@
 import type { Request, RequestsQuery, Response } from "caido:utils";
-import type { GrepOptions, GrepResultsResponse, Match } from "shared";
+import type { GrepOptions } from "shared";
 import type { CaidoBackendSDK } from "./types";
 
+// Track if a grep operation is currently running
 let isGrepActive = false;
 
 /**
@@ -23,7 +24,7 @@ export const grepRequests = async (
   sdk: CaidoBackendSDK,
   pattern: string,
   options: GrepOptions
-): Promise<{ data?: GrepResultsResponse; error?: string }> => {
+): Promise<{ data?: string[]; error?: string }> => {
   if (isGrepActive) {
     return { error: "A grep scan is already running" };
   }
@@ -37,12 +38,7 @@ export const grepRequests = async (
       error.message === "Grep operation was stopped"
     ) {
       return {
-        data: {
-          pattern,
-          count: 0,
-          matches: [],
-          matchGroup: options.matchGroup,
-        }
+        data: [],
       };
     }
     return { error: error instanceof Error ? error.message : String(error) };
@@ -60,13 +56,13 @@ export const stopGrep = async (): Promise<{
 }> => {
   if (!isGrepActive) {
     return {
-      data: { success: false, message: "No grep scan is currently running" }
+      data: { success: false, message: "No grep scan is currently running" },
     };
   }
 
   isGrepActive = false;
   return {
-    data: { success: true, message: "Grep scan stopped successfully" }
+    data: { success: true, message: "Grep scan stopped successfully" },
   };
 };
 
@@ -79,7 +75,7 @@ async function executeGrepSearch(
   sdk: CaidoBackendSDK,
   pattern: string,
   options: GrepOptions
-): Promise<{ data?: GrepResultsResponse; error?: string }> {
+): Promise<{ data?: string[]; error?: string }> {
   const project = await sdk.projects.getCurrent();
   if (!project) {
     return { error: "No project selected" };
@@ -91,41 +87,42 @@ async function executeGrepSearch(
   }
 
   const regex = new RegExp(pattern, "i");
-  const matches: Match[] = [];
+  const matches: Set<string> = new Set();
 
   sdk.api.send("caidogrep:progress", 0);
 
-  await fetchAndProcessRequests(
-    sdk,
-    regex,
-    options,
-    matches,
-    Number(lastRequestId)
-  );
-
-  const uniqueMatches = getUniqueMatches(matches);
-
-  sdk.api.send("caidogrep:progress", 100);
+  try {
+    await fetchAndProcessRequests(
+      sdk,
+      regex,
+      options,
+      matches,
+      Number(lastRequestId)
+    );
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "Grep operation was stopped"
+    ) {
+      return {
+        data: [],
+      };
+    }
+    throw error;
+  }
 
   return {
-    data: {
-      pattern,
-      count: uniqueMatches.length,
-      matches: uniqueMatches,
-      matchGroup: options.matchGroup,
-    }
+    data: Array.from(matches),
   };
 }
-
 /**
  * Fetches requests in batches and processes them to find matches
- * Handles pagination, progress reporting, and respects maxResults limit
  */
 async function fetchAndProcessRequests(
   sdk: CaidoBackendSDK,
   regex: RegExp,
   options: GrepOptions,
-  matches: Match[],
+  matches: Set<string>,
   lastRequestId: number
 ): Promise<void> {
   const {
@@ -136,33 +133,51 @@ async function fetchAndProcessRequests(
     onlyInScope = true,
   } = options;
 
-  let count = 0;
+  // Escape special characters in regex for the query
+  const escapedRegexStr = regex.source
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"');
+  const regexFilter = `resp.raw.regex:"${escapedRegexStr}" or req.raw.regex:"${escapedRegexStr}"`;
+
+  let matchCount = 0;
   let hasNextPage = true;
   let after: string | undefined = undefined;
-  let currentRequestID = 0;
+  let processedRequestID = 0;
   const pageSize = 50;
 
-  while (hasNextPage && (!maxResults || count < maxResults) && isGrepActive) {
+  while (
+    hasNextPage &&
+    (!maxResults || matchCount < maxResults) &&
+    isGrepActive
+  ) {
     const progress = Math.min(
-      Math.floor((currentRequestID / lastRequestId) * 100),
+      Math.floor((processedRequestID / lastRequestId) * 100),
       99
     );
     sdk.api.send("caidogrep:progress", progress);
 
+    // Build and execute query with pagination
     const query: RequestsQuery = after
-      ? sdk.requests.query().first(pageSize).after(after)
-      : sdk.requests.query().first(pageSize);
+      ? sdk.requests.query().filter(regexFilter).first(pageSize).after(after)
+      : sdk.requests.query().filter(regexFilter).first(pageSize);
 
-    const result = await query.execute();
+    // Execute the query with cancellation check
+    const queryPromise = query.execute();
+    const result = await executeQueryWithCancellationCheck(queryPromise);
 
+    if (!isGrepActive) {
+      throw new Error("Grep operation was stopped");
+    }
+
+    // Process each result
     for (const item of result.items) {
       if (!isGrepActive) {
         throw new Error("Grep operation was stopped");
       }
 
-      currentRequestID = Number(item.request.getId());
+      processedRequestID = Number(item.request.getId());
 
-      if (maxResults && count >= maxResults) break;
+      if (maxResults && matchCount >= maxResults) break;
 
       if (onlyInScope && !sdk.requests.inScope(item.request)) {
         continue;
@@ -178,21 +193,54 @@ async function fetchAndProcessRequests(
       );
 
       if (newMatches.length > 0) {
-        const requestId = item.request.getId();
+        const uniqueNewMatches = newMatches.filter(match => {
+          const trimmed = match.trim();
+          return !matches.has(trimmed);
+        });
 
         for (const content of newMatches) {
-          matches.push({ content: content.trim(), requestId });
-          count++;
-          if (maxResults && count >= maxResults) break;
+          matches.add(content.trim());
+          matchCount++;
+          if (maxResults && matchCount >= maxResults) break;
+        }
+
+        if (uniqueNewMatches.length > 0) {
+          sdk.api.send("caidogrep:matches", uniqueNewMatches);
         }
       }
     }
 
+    // Setup for next page if available
     hasNextPage = result.pageInfo.hasNextPage;
     if (hasNextPage) {
       after = result.pageInfo.endCursor;
     }
   }
+}
+
+/**
+ * Executes a query with periodic checks for cancellation
+ */
+async function executeQueryWithCancellationCheck<T>(
+  promise: Promise<T>
+): Promise<T> {
+  return new Promise<T>(async (resolve, reject) => {
+    const checkInterval = setInterval(() => {
+      if (!isGrepActive) {
+        clearInterval(checkInterval);
+        reject(new Error("Grep operation was stopped"));
+      }
+    }, 100);
+
+    try {
+      const result = await promise;
+      clearInterval(checkInterval);
+      resolve(result);
+    } catch (error) {
+      clearInterval(checkInterval);
+      reject(error);
+    }
+  });
 }
 
 /**
@@ -210,14 +258,22 @@ function findMatchesInRequestResponse(
   const contentMatches: string[] = [];
 
   if (includeRequests) {
-    const rawMatch = checkRequestRaw(request, regex, matchGroup);
+    const rawMatch = extractMatch(
+      request.getRaw()?.toText() || "",
+      regex,
+      matchGroup
+    );
     if (rawMatch) {
       contentMatches.push(rawMatch);
     }
   }
 
   if (includeResponses && response) {
-    const responseRawMatch = checkResponseRaw(response, regex, matchGroup);
+    const responseRawMatch = extractMatch(
+      response.getRaw()?.toText() || "",
+      regex,
+      matchGroup
+    );
     if (responseRawMatch) {
       contentMatches.push(responseRawMatch);
     }
@@ -227,66 +283,21 @@ function findMatchesInRequestResponse(
 }
 
 /**
- * Filters out duplicate matches based on content
- * Returns an array of unique Match objects
+ * Extract the match from a string based on the regex and matchGroup
  */
-function getUniqueMatches(matches: Match[]): Match[] {
-  const uniqueContents = new Set<string>();
-
-  return matches.filter((match) => {
-    const trimmedContent = match.content;
-    if (uniqueContents.has(trimmedContent)) {
-      return false;
-    }
-    uniqueContents.add(trimmedContent);
-    return true;
-  });
-}
-
-/**
- * Checks if the raw request content matches the regex pattern
- * Returns the matched string or null if no match found
- */
-function checkRequestRaw(
-  request: Request,
+function extractMatch(
+  text: string,
   regex: RegExp,
   matchGroup: number | null
 ): string | null {
-  try {
-    const raw = request.getRaw().toText();
-    if (raw) {
-      const match = raw.match(regex);
-      if (match) {
-        return matchGroup !== null && match[matchGroup]
-          ? match[matchGroup]
-          : match[0];
-      }
-    }
-  } catch (error) {}
-  return null;
-}
+  if (!text) return null;
 
-/**
- * Checks if the raw response content matches the regex pattern
- * Returns the matched string or null if no match found
- */
-function checkResponseRaw(
-  response: Response,
-  regex: RegExp,
-  matchGroup: number | null
-): string | null {
-  try {
-    const raw = response.getRaw().toText();
-    if (raw) {
-      const match = raw.match(regex);
-      if (match) {
-        return matchGroup !== null && match[matchGroup]
-          ? match[matchGroup]
-          : match[0];
-      }
-    }
-  } catch (error) {}
-  return null;
+  const match = text.match(regex);
+  if (!match) return null;
+
+  return matchGroup !== null && match[matchGroup]
+    ? match[matchGroup]
+    : match[0];
 }
 
 /**

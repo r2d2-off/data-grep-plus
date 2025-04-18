@@ -1,6 +1,5 @@
 import { useSDK } from "@/plugins/sdk";
 import { defineStore } from "pinia";
-import { GrepResultsResponse } from "shared";
 import { computed, ref } from "vue";
 
 export const useGrepStore = defineStore("grep", () => {
@@ -15,7 +14,7 @@ export const useGrepStore = defineStore("grep", () => {
   const onlyInScope = ref(true);
   const progress = ref(0);
 
-  const searchResults = ref<GrepResultsResponse | null>(null);
+  const searchResults = ref<string[] | null>(null);
 
   const searchGrepRequests = async () => {
     if (!pattern.value.trim()) {
@@ -54,12 +53,12 @@ export const useGrepStore = defineStore("grep", () => {
 
       searchResults.value = data;
 
-      if (data.count === 0) {
+      if (data.length === 0) {
         sdk.window.showToast("No matches found for the pattern", {
           variant: "info",
         });
       } else {
-        sdk.window.showToast(`Found ${data.count} matching results`, {
+        sdk.window.showToast(`Found ${data.length} matching results`, {
           variant: "success",
         });
       }
@@ -77,25 +76,25 @@ export const useGrepStore = defineStore("grep", () => {
   const matchesText = computed((): string => {
     if (!searchResults.value) return "";
 
-    const matches = searchResults.value.matches.map((match) => match.content);
+    const matches = searchResults.value.map((match) => match);
 
     return matches.join("\n");
   });
 
   const uniqueMatchesCount = computed((): number => {
     if (!searchResults.value) return 0;
-
-    const uniqueSet = new Set<string>();
-
-    searchResults.value.matches.forEach((match) => {
-      uniqueSet.add(match.content);
-    });
-
-    return uniqueSet.size;
+    return searchResults.value.length;
   });
 
   sdk.backend.onEvent("caidogrep:progress", (value: number) => {
     progress.value = value;
+  });
+
+  sdk.backend.onEvent("caidogrep:matches", (matches: Set<string>) => {
+    searchResults.value = [
+      ...(searchResults.value || []),
+      ...Array.from(matches),
+    ];
   });
 
   return {

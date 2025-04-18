@@ -38,12 +38,18 @@ const exportToFile = () => {
           <span class="text-xl font-semibold">
             <i class="fas fa-list mr-2"></i>
             <template v-if="store.searchResults">
-              Matches ({{ store.searchResults.count }} requests,
+              Matches ({{ store.searchResults.length }} requests,
               {{ store.uniqueMatchesCount }} matches)
             </template>
+            <template v-else-if="store.isSearching"> Searching... </template>
           </span>
-          <div v-if="store.searchResults" class="text-sm text-gray-500">
-            <template v-if="store.matchGroup !== null">
+          <div class="text-sm text-gray-500 flex items-center">
+            <template v-if="store.isSearching">
+              <div class="shimmer">Searching {{ store.progress }}%</div>
+            </template>
+            <template
+              v-else-if="store.searchResults && store.matchGroup !== null"
+            >
               Extracting group {{ store.matchGroup }}
             </template>
           </div>

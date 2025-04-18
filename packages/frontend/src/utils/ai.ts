@@ -13,7 +13,7 @@ Rules:
 Examples:
 <Input>regex for all urls</Input>
 <Output>
-https?://[^\\s"'<>]+
+https?://[^\"\\'> ]+
 0
 </Output>
 
