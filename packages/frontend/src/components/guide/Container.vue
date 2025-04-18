@@ -36,6 +36,9 @@ const guideStore = useGuideStore();
             <li>
               <span class="font-medium">Use Simple Regexes</span> - Complex regex patterns can significantly slow down search operations
             </li>
+            <li class="text-yellow-500">
+              <span class="font-medium">Warning for Large Projects</span> - When searching in very large projects, you should use Custom HTTPQL or Max Results to prevent performance issues
+            </li>
           </ul>
         </template>
       </Card>
