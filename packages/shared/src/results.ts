@@ -4,5 +4,7 @@ export interface GrepOptions {
   maxResults: number | null;
   matchGroup: number | null;
   onlyInScope: boolean;
+  skipLargeResponses: boolean;
   customHTTPQL: string | null;
+  cleanupOutput: boolean;
 }

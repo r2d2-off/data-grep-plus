@@ -15,6 +15,8 @@ export const useGrepStore = defineStore("grep", () => {
   const progress = ref(0);
   const searchResults = ref<string[] | null>(null);
   const customHTTPQL = ref<string | null>(null);
+  const skipLargeResponses = ref(true);
+  const cleanupOutput = ref(false);
 
   const searchGrepRequests = async () => {
     if (!pattern.value.trim()) {
@@ -36,6 +38,8 @@ export const useGrepStore = defineStore("grep", () => {
         matchGroup: matchGroup.value ?? null,
         onlyInScope: onlyInScope.value,
         customHTTPQL: customHTTPQL.value ?? null,
+        skipLargeResponses: skipLargeResponses.value,
+        cleanupOutput: cleanupOutput.value,
       });
 
       if (error) {
@@ -134,9 +138,12 @@ export const useGrepStore = defineStore("grep", () => {
     searchResults,
     matchesText,
     uniqueMatchesCount,
-    searchGrepRequests,
-    stopGrepSearch,
     progress,
     customHTTPQL,
+    skipLargeResponses,
+    cleanupOutput,
+
+    searchGrepRequests,
+    stopGrepSearch,
   };
 });

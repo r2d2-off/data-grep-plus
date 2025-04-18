@@ -44,7 +44,12 @@ export const usePatternsStore = defineStore("patterns", () => {
       name: "JWT Tokens",
       pattern: "eyJ[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]*\\.[a-zA-Z0-9_-]*",
       description: "Matches JWT tokens"
-    }
+    },
+    {
+      name: "Strings",
+      pattern: "'.*?'|\".*?\"|`.*?`",
+      description: "Matches strings"
+    },
   ];
 
   function openDialog() {

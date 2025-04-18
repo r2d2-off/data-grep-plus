@@ -6,41 +6,80 @@ import InputNumber from "primevue/inputnumber";
 import InputText from "primevue/inputtext";
 
 const grepStore = useGrepStore();
-const isSmallScreen = useMediaQuery('(max-width: 900px)');
+const isSmallScreen = useMediaQuery("(max-width: 900px)");
 </script>
 
 <template>
-  <div class="flex flex-row justify-between" :class="{ 'flex-col gap-4': isSmallScreen }">
-    <div class="flex flex-col gap-3">
-      <div class="flex items-center">
-        <Checkbox
-          v-model="grepStore.includeRequests"
-          :binary="true"
-          inputId="includeRequests"
-        />
-        <label for="includeRequests" class="ml-3">Include Requests</label>
+  <div
+    class="flex flex-row justify-between"
+    :class="{ 'flex-col gap-4': isSmallScreen }"
+  >
+    <div class="flex flex-row gap-6">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.includeRequests"
+            :binary="true"
+            inputId="includeRequests"
+          />
+          <label for="includeRequests" class="ml-3">Include Requests</label>
+        </div>
+
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.includeResponses"
+            :binary="true"
+            inputId="includeResponses"
+          />
+          <label for="includeResponses" class="ml-3">Include Responses</label>
+        </div>
+
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.onlyInScope"
+            :binary="true"
+            inputId="onlyInScope"
+          />
+          <label for="onlyInScope" class="ml-3">Only In Scope</label>
+          <i
+            class="fas fa-info-circle ml-2 text-gray-500"
+            v-tooltip.right="'Only include requests that are in scope'"
+          ></i>
+        </div>
       </div>
 
-      <div class="flex items-center">
-        <Checkbox
-          v-model="grepStore.includeResponses"
-          :binary="true"
-          inputId="includeResponses"
-        />
-        <label for="includeResponses" class="ml-3">Include Responses</label>
-      </div>
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.skipLargeResponses"
+            :binary="true"
+            inputId="skipLargeResponses"
+          />
+          <label for="skipLargeResponses" class="ml-3"
+            >Skip Large Responses</label
+          >
+          <i
+            class="fas fa-info-circle ml-2 text-gray-500"
+            v-tooltip.right="
+              'Skip responses larger than 10MB. This should be always used to avoid performance issues'
+            "
+          ></i>
+        </div>
 
-      <div class="flex items-center">
-        <Checkbox
-          v-model="grepStore.onlyInScope"
-          :binary="true"
-          inputId="onlyInScope"
-        />
-        <label for="onlyInScope" class="ml-3">Only In Scope</label>
-        <i
-          class="fas fa-info-circle ml-2 text-gray-500"
-          v-tooltip.right="'Only include requests that are in scope'"
-        ></i>
+        <div class="flex items-center">
+          <Checkbox
+            v-model="grepStore.cleanupOutput"
+            :binary="true"
+            inputId="cleanupOutput"
+          />
+          <label for="cleanupOutput" class="ml-3">Cleanup output</label>
+          <i
+            class="fas fa-info-circle ml-2 text-gray-500"
+            v-tooltip.right="
+              'Remove all non-printable characters from the output'
+            "
+          ></i>
+        </div>
       </div>
     </div>
     <div class="flex flex-wrap gap-6">

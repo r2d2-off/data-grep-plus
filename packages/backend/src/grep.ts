@@ -99,8 +99,9 @@ async function executeGrepSearch(
     data: Array.from(matches),
   };
 }
-
-
+/**
+ * Builds a regex filter based on the user's options
+ */
 function buildRegexFilter(regex: RegExp, options: GrepOptions) {
   const { includeRequests, includeResponses, customHTTPQL } = options;
 
@@ -119,14 +120,25 @@ function buildRegexFilter(regex: RegExp, options: GrepOptions) {
     filters.push(`resp.raw.regex:"${escapedRegexStr}"`);
   }
 
-  regexFilter = filters.join(" or ");
+  if (filters.length > 0) {
+    regexFilter = `(${filters.join(" or ")})`;
+  }
 
   if (customHTTPQL) {
-    regexFilter = `${customHTTPQL} and (${regexFilter})`;
+    regexFilter = `${customHTTPQL} and ${regexFilter}`;
+  }
+
+  if (options.skipLargeResponses) {
+    // Skip responses larger than 10MB
+    regexFilter = `${regexFilter} and resp.len.lt:10485760`;
+  } else {
+    // 100MB limit
+    regexFilter = `${regexFilter} and resp.len.lt:104857600`;
   }
 
   return regexFilter;
 }
+
 /**
  * Fetches requests in batches and processes them to find matches
  */
@@ -143,14 +155,22 @@ async function fetchAndProcessRequests(
     maxResults,
     matchGroup = null,
     onlyInScope = true,
+    cleanupOutput = false,
   } = options;
 
+  sdk.console.log(
+    "Starting grep operation with options:",
+    JSON.stringify(options)
+  );
+  sdk.console.log(`Regex pattern: ${regex.source}, flags: ${regex.flags}`);
+
   const regexFilter = buildRegexFilter(regex, options);
+  sdk.console.log(`Built regex filter: ${regexFilter}`);
 
   let hasNextPage = true;
   let after: string | undefined = undefined;
   let processedRequestID = 0;
-  const pageSize = 50;
+  const pageSize = 100;
 
   while (
     hasNextPage &&
@@ -162,34 +182,50 @@ async function fetchAndProcessRequests(
       99
     );
     sdk.api.send("caidogrep:progress", progress);
+    sdk.console.log(
+      `Progress: ${progress}%, processed ID: ${processedRequestID}, matches: ${matches.size}`
+    );
 
     // Build and execute query with pagination
     const query: RequestsQuery = after
       ? sdk.requests.query().filter(regexFilter).first(pageSize).after(after)
       : sdk.requests.query().filter(regexFilter).first(pageSize);
 
+    sdk.console.log(
+      `Executing query${
+        after ? ` with cursor: ${after}` : ""
+      }, page size: ${pageSize}`
+    );
+
     // Execute the query with cancellation check
     const queryPromise = query.execute();
     const result = await executeQueryWithCancellationCheck(queryPromise);
+    sdk.console.log(`Query returned ${result.items.length} items`);
 
     if (!isGrepActive) {
+      sdk.console.log("Grep operation was stopped during query execution");
       throw new Error("Grep operation was stopped");
     }
 
     // Process each result
     for (const item of result.items) {
       if (!isGrepActive) {
+        sdk.console.log("Grep operation was stopped during result processing");
         throw new Error("Grep operation was stopped");
       }
 
       processedRequestID = Number(item.request.getId());
 
-      if (maxResults && matches.size >= maxResults) break;
+      if (maxResults && matches.size >= maxResults) {
+        sdk.console.log(`Reached maximum results limit: ${maxResults}`);
+        break;
+      }
 
       if (onlyInScope && !sdk.requests.inScope(item.request)) {
         continue;
       }
 
+      sdk.console.log("Processing request " + processedRequestID);
       const newMatches = findMatchesInRequestResponse(
         item.request,
         item.response,
@@ -198,20 +234,36 @@ async function fetchAndProcessRequests(
         includeRequests,
         includeResponses
       );
-
       if (newMatches.length > 0) {
+        if (newMatches.length > 10) {
+          sdk.console.log(
+            `Found ${newMatches.length} matches in request ${processedRequestID}`
+          );
+        }
         const uniqueNewMatches = new Set<string>();
 
         for (const content of newMatches) {
-          const trimmed = content.trim();
-          if (!matches.has(trimmed)) {
-            matches.add(trimmed);
-            uniqueNewMatches.add(trimmed);
-            if (maxResults && matches.size >= maxResults) break;
+          let processedContent = content.trim();
+
+          // Remove non-printable characters if cleanupOutput is enabled
+          if (options.cleanupOutput) {
+            processedContent = processedContent.replace(/[^\x20-\x7E]/g, '');
+          }
+
+          if (!matches.has(processedContent)) {
+            matches.add(processedContent);
+            uniqueNewMatches.add(processedContent);
+            if (maxResults && matches.size >= maxResults) {
+              sdk.console.log(`Reached maximum results limit: ${maxResults}`);
+              break;
+            }
           }
         }
 
         if (uniqueNewMatches.size > 0) {
+          sdk.console.log(
+            `Sending ${uniqueNewMatches.size} new unique matches`
+          );
           sdk.api.send("caidogrep:matches", Array.from(uniqueNewMatches));
         }
       }
@@ -221,8 +273,13 @@ async function fetchAndProcessRequests(
     hasNextPage = result.pageInfo.hasNextPage;
     if (hasNextPage) {
       after = result.pageInfo.endCursor;
+      sdk.console.log(`Moving to next page with cursor: ${after}`);
+    } else {
+      sdk.console.log("No more pages to process");
     }
   }
+
+  sdk.console.log(`Grep operation completed. Total matches: ${matches.size}`);
 }
 
 /**
