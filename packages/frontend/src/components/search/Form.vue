@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useAIStore, useGrepStore, usePatternsStore } from "@/stores";
+import { GuideContainer } from "@/components/guide";
+import { useAIStore, useGrepStore, useGuideStore, usePatternsStore } from "@/stores";
 import Button from "primevue/button";
 import Divider from "primevue/divider";
 import Options from "./Options.vue";
@@ -10,6 +11,7 @@ import { PatternsDialogContainer } from "./patterns";
 const grepStore = useGrepStore();
 const aiStore = useAIStore();
 const patternsStore = usePatternsStore();
+const guideStore = useGuideStore();
 </script>
 
 <template>
@@ -27,31 +29,42 @@ const patternsStore = usePatternsStore();
     >
     <Options />
 
-    <div class="flex justify-start mt-2 gap-2">
+    <div class="flex justify-between mt-2 gap-2">
+      <div class="flex gap-2">
+        <Button
+          label="Search"
+          icon="fas fa-search"
+          class="p-button-primary"
+          @click="grepStore.searchGrepRequests"
+          :loading="grepStore.isSearching"
+          :disabled="!grepStore.pattern.trim()"
+        />
+        <Button
+          :loading="aiStore.isProcessing"
+          label="Ask AI"
+          icon="fas fa-robot"
+          class="p-button-secondary"
+          @click="aiStore.openDialog"
+        />
+        <Button
+          label="Predefined Patterns"
+          icon="fas fa-list"
+          class="p-button-secondary"
+          @click="patternsStore.openDialog"
+        />
+      </div>
       <Button
-        label="Search"
-        icon="fas fa-search"
-        class="p-button-primary"
-        @click="grepStore.searchGrepRequests"
-        :loading="grepStore.isSearching"
-        :disabled="!grepStore.pattern.trim()"
-      />
-      <Button
-        :loading="aiStore.isProcessing"
-        label="Ask AI"
-        icon="fas fa-robot"
+        label="Guide"
+        outlined
+        severity="info"
+        icon="fas fa-book"
         class="p-button-secondary"
-        @click="aiStore.openDialog"
-      />
-      <Button
-        label="Predefined Patterns"
-        icon="fas fa-list"
-        class="p-button-secondary"
-        @click="patternsStore.openDialog"
+        @click="guideStore.openDialog"
       />
     </div>
 
     <AIDialogContainer />
     <PatternsDialogContainer />
+    <GuideContainer />
   </div>
 </template>
