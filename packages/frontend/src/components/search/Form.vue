@@ -36,7 +36,7 @@ const guideStore = useGuideStore();
           icon="fas fa-search"
           class="p-button-primary"
           @click="grepStore.searchGrepRequests"
-          :loading="grepStore.isSearching"
+          :loading="grepStore.status.isSearching"
           :disabled="!grepStore.pattern.trim()"
         />
         <Button

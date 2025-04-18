@@ -8,6 +8,7 @@ const aiStore = useAIStore();
 const sdk = useSDK();
 
 const goToEnvironment = () => {
+  sdk.navigation.goTo("/environment");
   aiStore.closeDialog();
 };
 </script>

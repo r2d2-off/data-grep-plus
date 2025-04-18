@@ -3,6 +3,7 @@ import { useSDK } from "@/plugins/sdk";
 import { useGrepRepository } from "@/repositories/grep";
 import { useGrepStore } from "@/stores";
 import { copyToClipboard } from "@/utils/clipboard";
+import { formatTime } from "@/utils/time";
 import Button from "primevue/button";
 import Card from "primevue/card";
 import VirtualScroller from "primevue/virtualscroller";
@@ -17,7 +18,7 @@ const sdk = useSDK();
 const { downloadResults, stopGrep } = useGrepRepository();
 
 const hasResults = computed(
-  () => store.searchResults && store.searchResults?.length > 0
+  () => store.results.searchResults && store.results.searchResults?.length > 0
 );
 
 const copyAllMatches = async () => {
@@ -88,26 +89,26 @@ const stopSearch = async () => {
         <div class="flex justify-between items-center mb-4">
           <span class="text-xl font-semibold">
             <i class="fas fa-list mr-2"></i>
-            <template v-if="store.searchResults">
-              Matches ({{ store.uniqueMatchesCount }} matches)
+            <template v-if="store.results.searchResults">
+              Matches ({{ store.results.uniqueMatchesCount }} matches)
             </template>
-            <template v-else-if="store.isSearching"> Searching... </template>
+            <template v-else-if="store.status.isSearching"> Searching... </template>
           </span>
           <div class="text-sm text-gray-500 flex items-center gap-2">
-            <template v-if="store.isSearching">
-              <div class="shimmer">Searching {{ store.progress }}%</div>
+            <template v-if="store.status.isSearching">
+              <div class="shimmer">Searching {{ store.status.progress }}%</div>
             </template>
             <template
-              v-else-if="store.searchResults && store.matchGroup !== null"
+              v-else-if="store.results.searchResults"
             >
-              Extracting group {{ store.matchGroup }}
+              Scan finished in {{ formatTime(store.results.searchTime) }}
             </template>
           </div>
         </div>
         <div class="flex flex-col gap-4 h-full">
           <VirtualScroller
-            v-if="store.searchResults?.length"
-            :items="store.searchResults"
+            v-if="store.results.searchResults?.length"
+            :items="store.results.searchResults"
             :itemSize="24"
             class="w-full h-full border border-gray-700"
             scrollHeight="100%"
@@ -143,7 +144,7 @@ const stopSearch = async () => {
               :disabled="!hasResults"
             />
             <Button
-              v-if="store.isSearching"
+              v-if="store.status.isSearching"
               severity="danger"
               size="small"
               label="Stop"

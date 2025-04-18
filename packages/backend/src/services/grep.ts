@@ -32,7 +32,7 @@ export const grepService = {
     sdk: CaidoBackendSDK,
     pattern: string,
     options: GrepOptions
-  ): Promise<{ matchesCount?: number; error?: string }> {
+  ): Promise<{ data?: { matchesCount?: number, timeTaken?: number }; error?: string }> {
     if (isGrepActive) {
       return { error: "A grep scan is already running" };
     }
@@ -45,7 +45,10 @@ export const grepService = {
     try {
       isGrepActive = true;
       grepStore.clear();
-      return await this.executeGrepSearch(sdk, pattern, options);
+      const startTime = Date.now();
+      const result = await this.executeGrepSearch(sdk, pattern, options);
+      const timeTaken = Date.now() - startTime;
+      return { data: { ...result, timeTaken } };
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) };
     } finally {
@@ -228,17 +231,18 @@ export const grepService = {
           includeRequests,
           includeResponses
         );
+
         if (newMatches.length > 0) {
           for (const content of newMatches) {
             let processedContent = content.trim();
 
-            if (options.cleanupOutput) {
-              processedContent = processedContent.replace(/[^\x20-\x7E]/g, "");
+            // Skip matches with non-printable characters if cleanup is enabled
+            if (options.cleanupOutput && /[^\x20-\x7E]/.test(processedContent)) {
+              continue;
             }
 
             if (!matches.has(processedContent)) {
               matches.add(processedContent);
-              // Also add to the persistent store
               grepStore.addMatch(processedContent);
               pageUniqueNewMatches.add(processedContent);
               if (maxResults && matches.size >= maxResults) {

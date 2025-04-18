@@ -1,25 +1,37 @@
 import { useSDK } from "@/plugins/sdk";
 import { useGrepRepository } from "@/repositories/grep";
+import { formatTime } from "@/utils/time";
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import type { GrepOptions, GrepResults, GrepStatus } from "shared";
+import { reactive, ref } from "vue";
 
 export const useGrepStore = defineStore("grep", () => {
   const sdk = useSDK();
+  const grepRepository = useGrepRepository();
 
   const pattern = ref("");
-  const includeRequests = ref(true);
-  const includeResponses = ref(true);
-  const maxResults = ref<number | null>(null);
-  const isSearching = ref(false);
-  const matchGroup = ref<number | null>(null);
-  const onlyInScope = ref(true);
-  const progress = ref(0);
-  const searchResults = ref<string[] | null>(null);
-  const customHTTPQL = ref<string | null>(null);
-  const skipLargeResponses = ref(true);
-  const cleanupOutput = ref(false);
-  const uniqueMatchesCount = ref(0);
-  const grepRepository = useGrepRepository();
+
+  const options = reactive<GrepOptions>({
+    includeRequests: true,
+    includeResponses: true,
+    maxResults: null,
+    matchGroup: null,
+    onlyInScope: true,
+    customHTTPQL: null,
+    skipLargeResponses: true,
+    cleanupOutput: true,
+  });
+
+  const status = reactive<GrepStatus>({
+    isSearching: false,
+    progress: 0,
+  });
+
+  const results = reactive<GrepResults>({
+    searchResults: null,
+    uniqueMatchesCount: 0,
+    searchTime: 0,
+  });
 
   const searchGrepRequests = async () => {
     if (!pattern.value.trim()) {
@@ -29,25 +41,16 @@ export const useGrepStore = defineStore("grep", () => {
       return;
     }
 
-    searchResults.value = null;
-    isSearching.value = true;
-    progress.value = 0;
-    uniqueMatchesCount.value = 0;
+    results.searchResults = null;
+    status.isSearching = true;
+    status.progress = 0;
+    results.uniqueMatchesCount = 0;
 
     try {
-      const { matchesCount, cancelled } = await grepRepository.searchGrepRequests(
-        pattern.value,
-        {
-          includeRequests: includeRequests.value,
-          includeResponses: includeResponses.value,
-          maxResults: maxResults.value ?? null,
-          matchGroup: matchGroup.value ?? null,
-          onlyInScope: onlyInScope.value,
-          customHTTPQL: customHTTPQL.value ?? null,
-          skipLargeResponses: skipLargeResponses.value,
-          cleanupOutput: cleanupOutput.value,
-        }
-      );
+      const { matchesCount, cancelled, timeTaken } =
+        await grepRepository.searchGrepRequests(pattern.value, options);
+
+      results.searchTime = timeTaken ?? 0;
 
       if (cancelled) {
         return;
@@ -65,9 +68,14 @@ export const useGrepStore = defineStore("grep", () => {
           variant: "info",
         });
       } else {
-        sdk.window.showToast(`Found ${matchesCount} matching results`, {
-          variant: "success",
-        });
+        sdk.window.showToast(
+          `Found ${matchesCount} matching results in ${formatTime(
+            results.searchTime
+          )}`,
+          {
+            variant: "success",
+          }
+        );
       }
     } catch (error: unknown) {
       const errorMessage =
@@ -76,51 +84,42 @@ export const useGrepStore = defineStore("grep", () => {
         variant: "error",
       });
     } finally {
-      isSearching.value = false;
+      status.isSearching = false;
     }
   };
 
-
   sdk.backend.onEvent("caidogrep:progress", (value: number) => {
-    progress.value = value;
+    status.progress = value;
   });
 
   sdk.backend.onEvent("caidogrep:matches", (matches: number | string[]) => {
     if (typeof matches === "number") {
-      uniqueMatchesCount.value += matches;
+      results.uniqueMatchesCount += matches;
     } else {
       const newResults = [
-        ...(searchResults.value || []),
+        ...(results.searchResults || []),
         ...Array.from(matches),
       ];
 
       if (newResults.length >= 25000) {
         const truncatedResults = newResults.slice(0, 25000);
-        truncatedResults.push("!!! Results truncated to 25K. Export to view more");
-        searchResults.value = truncatedResults;
+        truncatedResults.push(
+          "!!! Results truncated to 25K. Export to view more"
+        );
+        results.searchResults = truncatedResults;
       } else {
-        searchResults.value = newResults;
+        results.searchResults = newResults;
       }
 
-      uniqueMatchesCount.value += matches.length;
+      results.uniqueMatchesCount += matches.length;
     }
   });
 
   return {
     pattern,
-    includeRequests,
-    includeResponses,
-    maxResults,
-    isSearching,
-    matchGroup,
-    onlyInScope,
-    searchResults,
-    uniqueMatchesCount,
-    progress,
-    customHTTPQL,
-    skipLargeResponses,
-    cleanupOutput,
-
+    options,
+    status,
+    results,
     searchGrepRequests,
   };
 });

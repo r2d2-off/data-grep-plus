@@ -56,7 +56,7 @@ export const useAIStore = defineStore("ai", () => {
           if (count === 0) {
             grepStore.pattern = content;
           } else {
-            grepStore.matchGroup = parseInt(content) || 0;
+            grepStore.options.matchGroup = parseInt(content) || 0;
           }
 
           count++;

@@ -37,10 +37,7 @@ export const useGrepRepository = () => {
   const searchGrepRequests = async (pattern: string, options: GrepOptions) => {
     let cancelled = false;
 
-    const { error, matchesCount } = await sdk.backend.grepRequests(
-      pattern,
-      options
-    );
+    const { error, data } = await sdk.backend.grepRequests(pattern, options);
 
     if (error) {
       if (error === "Grep operation was stopped") {
@@ -50,11 +47,15 @@ export const useGrepRepository = () => {
         sdk.window.showToast(error, {
           variant: "error",
         });
-        return { matchesCount: 0, cancelled };
+        return { matchesCount: 0, timeTaken: 0, cancelled };
       }
     }
 
-    return { matchesCount, cancelled };
+    return {
+      matchesCount: data?.matchesCount,
+      timeTaken: data?.timeTaken,
+      cancelled,
+    };
   };
 
   return {

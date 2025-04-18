@@ -9,9 +9,9 @@ const store = useGrepStore();
 </script>
 
 <template>
-  <Results v-if="store.searchResults && store.searchResults.length > 0" />
+  <Results v-if="store.results.searchResults && store.results.searchResults.length > 0" />
   <Welcome v-else-if="!store.pattern.trim()" />
-  <Searching v-else-if="store.isSearching" />
+  <Searching v-else-if="store.status.isSearching" />
   <None v-else />
 </template>
 

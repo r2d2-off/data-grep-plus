@@ -18,7 +18,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
       <div class="flex flex-col gap-3">
         <div class="flex items-center">
           <Checkbox
-            v-model="grepStore.includeRequests"
+            v-model="grepStore.options.includeRequests"
             :binary="true"
             inputId="includeRequests"
           />
@@ -27,7 +27,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
 
         <div class="flex items-center">
           <Checkbox
-            v-model="grepStore.includeResponses"
+            v-model="grepStore.options.includeResponses"
             :binary="true"
             inputId="includeResponses"
           />
@@ -36,7 +36,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
 
         <div class="flex items-center">
           <Checkbox
-            v-model="grepStore.onlyInScope"
+            v-model="grepStore.options.onlyInScope"
             :binary="true"
             inputId="onlyInScope"
           />
@@ -51,7 +51,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
       <div class="flex flex-col gap-3">
         <div class="flex items-center">
           <Checkbox
-            v-model="grepStore.skipLargeResponses"
+            v-model="grepStore.options.skipLargeResponses"
             :binary="true"
             inputId="skipLargeResponses"
           />
@@ -68,7 +68,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
 
         <div class="flex items-center">
           <Checkbox
-            v-model="grepStore.cleanupOutput"
+            v-model="grepStore.options.cleanupOutput"
             :binary="true"
             inputId="cleanupOutput"
           />
@@ -94,7 +94,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
           ></i>
         </label>
         <InputNumber
-          v-model="grepStore.matchGroup"
+          v-model="grepStore.options.matchGroup"
           :min="0"
           :max="99"
           placeholder="Match group (optional)"
@@ -113,7 +113,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
           ></i>
         </label>
         <InputNumber
-          v-model="grepStore.maxResults"
+          v-model="grepStore.options.maxResults"
           :min="1"
           :max="1000"
           placeholder="Unlimited"
@@ -130,7 +130,7 @@ const isSmallScreen = useMediaQuery("(max-width: 900px)");
           ></i>
         </label>
         <InputText
-          v-model="grepStore.customHTTPQL"
+          v-model="grepStore.options.customHTTPQL"
           placeholder="Custom HTTPQL"
           class="w-full"
         />

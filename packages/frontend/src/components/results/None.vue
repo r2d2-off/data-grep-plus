@@ -15,13 +15,13 @@ const store = useGrepStore();
     <template #content>
       <div class="flex flex-col items-center justify-center h-full gap-4">
         <i
-          v-if="store.pattern.trim() && store.searchResults?.length === 0"
+          v-if="store.pattern.trim() && store.results.searchResults?.length === 0"
           class="fas fa-search-minus text-gray-400 text-3xl"
         ></i>
         <i v-else class="fas fa-search text-gray-400 text-3xl"></i>
 
         <div
-          v-if="store.pattern.trim() && store.searchResults?.length === 0"
+          v-if="store.pattern.trim() && store.results.searchResults?.length === 0"
           class="text-gray-400 text-md"
         >
           No results found
