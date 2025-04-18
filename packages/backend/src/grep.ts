@@ -155,17 +155,9 @@ async function fetchAndProcessRequests(
     maxResults,
     matchGroup = null,
     onlyInScope = true,
-    cleanupOutput = false,
   } = options;
 
-  sdk.console.log(
-    "Starting grep operation with options:",
-    JSON.stringify(options)
-  );
-  sdk.console.log(`Regex pattern: ${regex.source}, flags: ${regex.flags}`);
-
   const regexFilter = buildRegexFilter(regex, options);
-  sdk.console.log(`Built regex filter: ${regexFilter}`);
 
   let hasNextPage = true;
   let after: string | undefined = undefined;
@@ -182,42 +174,28 @@ async function fetchAndProcessRequests(
       99
     );
     sdk.api.send("caidogrep:progress", progress);
-    sdk.console.log(
-      `Progress: ${progress}%, processed ID: ${processedRequestID}, matches: ${matches.size}`
-    );
 
     // Build and execute query with pagination
     const query: RequestsQuery = after
       ? sdk.requests.query().filter(regexFilter).first(pageSize).after(after)
       : sdk.requests.query().filter(regexFilter).first(pageSize);
 
-    sdk.console.log(
-      `Executing query${
-        after ? ` with cursor: ${after}` : ""
-      }, page size: ${pageSize}`
-    );
-
     // Execute the query with cancellation check
     const queryPromise = query.execute();
     const result = await executeQueryWithCancellationCheck(queryPromise);
-    sdk.console.log(`Query returned ${result.items.length} items`);
 
     if (!isGrepActive) {
-      sdk.console.log("Grep operation was stopped during query execution");
       throw new Error("Grep operation was stopped");
     }
 
     // Process each result
     for (const item of result.items) {
       if (!isGrepActive) {
-        sdk.console.log("Grep operation was stopped during result processing");
         throw new Error("Grep operation was stopped");
       }
 
       processedRequestID = Number(item.request.getId());
-
       if (maxResults && matches.size >= maxResults) {
-        sdk.console.log(`Reached maximum results limit: ${maxResults}`);
         break;
       }
 
@@ -225,8 +203,8 @@ async function fetchAndProcessRequests(
         continue;
       }
 
-      sdk.console.log("Processing request " + processedRequestID);
       const newMatches = findMatchesInRequestResponse(
+        sdk,
         item.request,
         item.response,
         regex,
@@ -235,35 +213,25 @@ async function fetchAndProcessRequests(
         includeResponses
       );
       if (newMatches.length > 0) {
-        if (newMatches.length > 10) {
-          sdk.console.log(
-            `Found ${newMatches.length} matches in request ${processedRequestID}`
-          );
-        }
         const uniqueNewMatches = new Set<string>();
 
         for (const content of newMatches) {
           let processedContent = content.trim();
 
-          // Remove non-printable characters if cleanupOutput is enabled
           if (options.cleanupOutput) {
-            processedContent = processedContent.replace(/[^\x20-\x7E]/g, '');
+            processedContent = processedContent.replace(/[^\x20-\x7E]/g, "");
           }
 
           if (!matches.has(processedContent)) {
             matches.add(processedContent);
             uniqueNewMatches.add(processedContent);
             if (maxResults && matches.size >= maxResults) {
-              sdk.console.log(`Reached maximum results limit: ${maxResults}`);
               break;
             }
           }
         }
 
         if (uniqueNewMatches.size > 0) {
-          sdk.console.log(
-            `Sending ${uniqueNewMatches.size} new unique matches`
-          );
           sdk.api.send("caidogrep:matches", Array.from(uniqueNewMatches));
         }
       }
@@ -273,13 +241,8 @@ async function fetchAndProcessRequests(
     hasNextPage = result.pageInfo.hasNextPage;
     if (hasNextPage) {
       after = result.pageInfo.endCursor;
-      sdk.console.log(`Moving to next page with cursor: ${after}`);
-    } else {
-      sdk.console.log("No more pages to process");
     }
   }
-
-  sdk.console.log(`Grep operation completed. Total matches: ${matches.size}`);
 }
 
 /**
@@ -312,6 +275,7 @@ async function executeQueryWithCancellationCheck<T>(
  * Returns an array of matching strings based on user preferences
  */
 function findMatchesInRequestResponse(
+  sdk: CaidoBackendSDK,
   request: Request,
   response: Response | undefined,
   regex: RegExp,
@@ -322,46 +286,48 @@ function findMatchesInRequestResponse(
   const contentMatches: string[] = [];
 
   if (includeRequests) {
-    const rawMatch = extractMatch(
+    const rawMatches = extractMatches(
       request.getRaw()?.toText() || "",
       regex,
       matchGroup
     );
-    if (rawMatch) {
-      contentMatches.push(rawMatch);
+    if (rawMatches) {
+      contentMatches.push(...rawMatches);
     }
   }
 
   if (includeResponses && response) {
-    const responseRawMatch = extractMatch(
+    const responseRawMatches = extractMatches(
       response.getRaw()?.toText() || "",
       regex,
       matchGroup
     );
-    if (responseRawMatch) {
-      contentMatches.push(responseRawMatch);
+
+    if (responseRawMatches) {
+      contentMatches.push(...responseRawMatches);
     }
   }
 
   return contentMatches;
 }
-
 /**
- * Extract the match from a string based on the regex and matchGroup
+ * Extract all matches from a string based on the regex and matchGroup
  */
-function extractMatch(
+function extractMatches(
   text: string,
   regex: RegExp,
   matchGroup: number | null
-): string | null {
-  if (!text) return null;
+): string[] {
+  if (!text) return [];
 
-  const match = text.match(regex);
-  if (!match) return null;
+  const matches = Array.from(text.matchAll(new RegExp(regex, 'g')));
+  if (!matches.length) return [];
 
-  return matchGroup !== null && match[matchGroup]
-    ? match[matchGroup]
-    : match[0];
+  return matches.map(match =>
+    matchGroup !== null && match[matchGroup]
+      ? match[matchGroup]
+      : match[0]
+  );
 }
 
 /**
