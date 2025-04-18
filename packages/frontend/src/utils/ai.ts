@@ -9,6 +9,8 @@ Rules:
 - The regex should be as accurate and minimal as possible for what the user asked.
 - If the pattern has no capturing group, return 0 as match group.
 - If there’s a relevant capturing group, return the correct group number that contains the main match.
+- Make sure regex is valid.
+- Make sure regex is performance optimized.
 
 Examples:
 <Input>regex for all urls</Input>
@@ -23,9 +25,11 @@ https?://[^\"\\'> ]+
 0
 </Output>
 
+In both examples notice two lines are returned. The first line is the regex pattern and the second line is the match group number.
+
 Just return the pattern and the group number. Nothing more.`;
 
-export async function fetchOpenAIStream(
+export async function askOpenAI(
   apiKey: string,
   userPrompt: string,
   systemPrompt: string,
@@ -50,43 +54,8 @@ export async function fetchOpenAIStream(
         content: userPrompt,
       },
     ],
-    stream: true,
+    stream: false,
   };
-
-  async function processStream(
-    reader: ReadableStreamDefaultReader<Uint8Array>,
-    controller: ReadableStreamDefaultController<Uint8Array>
-  ): Promise<void> {
-    const { done, value } = await reader.read();
-
-    if (done) {
-      controller.close();
-      return;
-    }
-
-    controller.enqueue(value);
-
-    const decodedText = new TextDecoder().decode(value);
-    const lines = decodedText.split("data:");
-
-    lines.forEach((line) => {
-      const trimmedLine = line.trim();
-      if (!trimmedLine || trimmedLine === "[DONE]") return;
-      if (!trimmedLine.startsWith("{")) return;
-
-      try {
-        const jsonObject = JSON.parse(trimmedLine);
-        const content = jsonObject.choices[0]?.delta?.content;
-        if (content) {
-          handleContent(content);
-        }
-      } catch (error) {
-        console.error("Error parsing JSON:", error);
-      }
-    });
-
-    return processStream(reader, controller);
-  }
 
   try {
     const response = await fetch(apiEndpoint, {
@@ -95,17 +64,21 @@ export async function fetchOpenAIStream(
       body: JSON.stringify(data),
     });
 
-    const reader = response.body?.getReader();
-    if (reader) {
-      const stream = new ReadableStream({
-        start(controller) {
-          processStream(reader, controller);
-        },
-      });
+    if (!response.ok) {
+      throw new Error(`API request failed with status ${response.status}`);
+    }
 
-      await new Response(stream).text();
+    const jsonResponse = await response.json();
+    const content = jsonResponse.choices[0]?.message?.content;
+
+    if (content) {
+      const lines = content.split('\n');
+      for (const line of lines) {
+        handleContent(line);
+      }
     }
   } catch (err) {
     console.error("Fetch error:", err);
+    throw err;
   }
 }

@@ -1,5 +1,5 @@
 import { useSDK } from "@/plugins/sdk";
-import { fetchOpenAIStream, SYSTEM_PROMPT } from "@/utils/ai";
+import { askOpenAI, SYSTEM_PROMPT } from "@/utils/ai";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import { useGrepStore } from "./grepStore";
@@ -45,24 +45,21 @@ export const useAIStore = defineStore("ai", () => {
     isProcessing.value = true;
     dialogVisible.value = false;
 
-    let regexPattern = "";
-    let groupNumber = "0";
-    let isFirstLine = true;
+    let count = 0;
 
     try {
-      await fetchOpenAIStream(
+      await askOpenAI(
         apiKey.value,
         prompt.value,
         SYSTEM_PROMPT,
-        (content) => {
-          if (isFirstLine) {
-            regexPattern += content;
+        (content: string) => {
+          if (count === 0) {
+            grepStore.pattern = content;
           } else {
-            groupNumber += content;
+            grepStore.matchGroup = parseInt(content) || 0;
           }
 
-          grepStore.pattern = regexPattern;
-          grepStore.matchGroup = parseInt(groupNumber) || 0;
+          count++;
         }
       );
 
