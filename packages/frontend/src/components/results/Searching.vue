@@ -34,20 +34,17 @@ const stopSearch = async () => {
     <template #content>
       <div class="flex flex-col items-center justify-center h-full gap-4">
         <i class="fas fa-spinner fa-spin text-gray-400 text-3xl"></i>
-
-        <div class="flex flex-col items-center gap-4">
-          <div class="text-gray-400 text-md shimmer">
-            Searching {{ store.progress }}%
-          </div>
-          <Button
-            severity="danger"
-            size="small"
-            label="Stop"
-            icon="fas fa-stop"
-            :loading="isStoppingSearch"
-            @click="stopSearch"
-          />
+        <div class="text-gray-400 text-md shimmer">
+          Searching {{ store.progress }}%
         </div>
+        <Button
+          severity="danger"
+          size="small"
+          label="Stop"
+          icon="fas fa-stop"
+          :loading="isStoppingSearch"
+          @click="stopSearch"
+        />
       </div>
     </template>
   </Card>
