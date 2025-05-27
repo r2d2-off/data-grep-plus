@@ -46,6 +46,7 @@ export const useGrepStore = defineStore("grep", () => {
     status.isSearching = true;
     status.progress = 0;
     results.uniqueMatchesCount = 0;
+    results.cancelled = false;
 
     try {
       const { matchesCount, cancelled, timeTaken } =
