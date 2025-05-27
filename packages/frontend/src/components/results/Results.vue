@@ -242,7 +242,7 @@ const stopSearch = async () => {
                 v-model="currentSort"
                 optionLabel="label"
                 optionValue="value"
-                class="w-48"
+                class="w-64"
                 placeholder="Select sorting..."
               >
                 <template #value="{ value }">
