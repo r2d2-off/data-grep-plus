@@ -2,6 +2,7 @@ import { Classic } from "@caido/primevue";
 import { createPinia } from "pinia";
 import { Tooltip } from "primevue";
 import PrimeVue from "primevue/config";
+import ConfirmationService from "primevue/confirmationservice";
 import { createApp } from "vue";
 import { SDKPlugin } from "./plugins/sdk";
 import type { FrontendSDK } from "./types";
@@ -18,6 +19,7 @@ export const init = (sdk: FrontendSDK) => {
     pt: Classic,
   });
 
+  app.use(ConfirmationService);
   app.directive("tooltip", Tooltip);
   app.use(pinia);
   app.use(SDKPlugin, sdk);

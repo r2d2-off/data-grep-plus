@@ -31,6 +31,10 @@ importers:
         version: 5.5.4
 
   packages/backend:
+    dependencies:
+      zod:
+        specifier: ^3.25.30
+        version: 3.25.30
     devDependencies:
       '@caido/sdk-backend':
         specifier: ^0.47.1
@@ -1556,6 +1560,9 @@ packages:
   zod@3.24.1:
     resolution: {integrity: sha512-muH7gBL9sI1nciMZV67X5fTKKBLtwpZ5VBp1vsOQzj1MhrBZ4wlVCm3gedKZWLp0Oyel8sIGfeiz54Su+OVT+A==}
 
+  zod@3.25.30:
+    resolution: {integrity: sha512-VolhdEtu6TJr/fzGuHA/SZ5ixvXqA6ADOG9VRcQ3rdOKmF5hkmcJbyaQjUH5BgmpA9gej++zYRX7zjSmdReIwA==}
+
 snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
@@ -2971,3 +2978,5 @@ snapshots:
   yaml@2.7.1: {}
 
   zod@3.24.1: {}
+
+  zod@3.25.30: {}

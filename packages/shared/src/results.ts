@@ -20,3 +20,10 @@ export interface GrepResults {
   searchTime: number;
   cancelled: boolean;
 }
+
+export interface CustomRegex {
+  name: string;
+  description: string;
+  regex: string;
+  matchGroups?: number[];
+}
