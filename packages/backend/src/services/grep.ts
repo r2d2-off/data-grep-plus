@@ -127,17 +127,16 @@ export const grepService = {
     }
 
     const regex = new RegExp(pattern, "i");
-    const matches: Set<string> = new Set();
+    let matchesCount = 0;
 
     sdk.api.send("caidogrep:progress", 0);
 
     try {
-      await this.fetchAndProcessRequests(
+      matchesCount = await this.fetchAndProcessRequests(
         sdk,
         regex,
         options,
-        matches,
-        Number(lastRequestId)
+        lastRequestId
       );
     } catch (error) {
       if (stopResolve) {
@@ -151,7 +150,7 @@ export const grepService = {
     }
 
     return {
-      matchesCount: matches.size,
+      matchesCount,
     };
   },
 
@@ -162,9 +161,8 @@ export const grepService = {
     sdk: CaidoBackendSDK,
     regex: RegExp,
     options: GrepOptions,
-    matches: Set<string>,
     lastRequestId: number
-  ): Promise<void> {
+  ): Promise<number> {
     const {
       includeRequests = true,
       includeResponses = true,
@@ -173,13 +171,14 @@ export const grepService = {
       onlyInScope = true,
     } = options;
 
+    const matches: Set<string> = new Set();
     const regexFilter = buildRegexFilter(regex, options);
 
     let hasNextPage = true;
     let after: string | undefined = undefined;
     let processedRequestID = 0;
     const pageSize = 100;
-    let sentMatchesCount = 0;
+    let sentMatchCount = 0;
 
     while (
       hasNextPage &&
@@ -210,9 +209,6 @@ export const grepService = {
         }
         throw new Error("Grep operation was stopped");
       }
-
-      // Collect all new matches for this page
-      const pageUniqueNewMatches = new Set<string>();
 
       // Process each result
       for (const item of result.items) {
@@ -261,7 +257,6 @@ export const grepService = {
             if (!matches.has(processedContent)) {
               matches.add(processedContent);
               grepStore.addMatch(processedContent);
-              pageUniqueNewMatches.add(processedContent);
               if (maxResults && matches.size >= maxResults) {
                 break;
               }
@@ -270,13 +265,15 @@ export const grepService = {
         }
       }
 
-      if (pageUniqueNewMatches.size > 0) {
-        if (sentMatchesCount > 25000) {
-          sdk.api.send("caidogrep:matches", pageUniqueNewMatches.size);
+      // Send new matches if any were found
+      if (matches.size > sentMatchCount) {
+        const newMatches = Array.from(matches).slice(sentMatchCount);
+        if (sentMatchCount > 25000) {
+          sdk.api.send("caidogrep:matches", newMatches.length);
         } else {
-          sdk.api.send("caidogrep:matches", Array.from(pageUniqueNewMatches));
-          sentMatchesCount += pageUniqueNewMatches.size;
+          sdk.api.send("caidogrep:matches", newMatches);
         }
+        sentMatchCount = matches.size;
       }
 
       // Setup for next page if available
@@ -285,6 +282,8 @@ export const grepService = {
         after = result.pageInfo.endCursor;
       }
     }
+
+    return matches.size;
   },
 
   /**
@@ -332,9 +331,11 @@ export const grepService = {
   /**
    * Retrieves the ID of the last request in the database
    */
-  async getLastRequestID(sdk: CaidoBackendSDK): Promise<string | null> {
+  async getLastRequestID(sdk: CaidoBackendSDK): Promise<number | null> {
     const requests = sdk.requests.query().last(1);
     const result = await requests.execute();
-    return result.items[0]?.request.getId() || null;
+    return result.items[0]?.request.getId()
+      ? Number(result.items[0].request.getId())
+      : null;
   },
 };
