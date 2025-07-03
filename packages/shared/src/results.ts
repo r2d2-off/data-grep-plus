@@ -15,6 +15,7 @@ export interface GrepStatus {
 }
 
 export interface GrepMatch {
+  id: number;
   url: string;
   match: string;
   location: string;
