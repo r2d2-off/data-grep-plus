@@ -63,12 +63,13 @@ const sortedResults = computed(() => {
 });
 
 watch(
-  () => store.results.searchResults,
-  (val) => {
-    if (val && val.length > 0 && typeof val[0] !== "string") {
-      store.selectMatch(val[0] as GrepMatch);
+  () => sortedResults.value,
+  (rows) => {
+    if (rows.length > 0) {
+      store.selectMatch(rows[0] as GrepMatch);
     }
-  }
+  },
+  { immediate: true }
 );
 
 const hasResults = computed(() => sortedResults.value.length > 0);
@@ -209,11 +210,11 @@ const rowMinWidth = computed(() =>
             <div class="border border-gray-700 h-full flex flex-col overflow-hidden">
               <div
                 class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
-                :style="{ width: rowMinWidth + 'px' }"
+                :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
               >
                 <div
-                  class="px-2 relative select-none truncate"
-                  :style="{ width: columnWidths.source + 'px' }"
+                  class="px-2 relative select-none truncate border-r border-gray-700"
+                  :style="{ width: columnWidths.source + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
                 >
                   Source
                   <span
@@ -222,8 +223,8 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none truncate"
-                  :style="{ width: columnWidths.host + 'px' }"
+                  class="px-2 relative select-none truncate border-r border-gray-700"
+                  :style="{ width: columnWidths.host + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
                 >
                   Host
                   <span
@@ -232,8 +233,8 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none truncate"
-                  :style="{ width: columnWidths.url + 'px' }"
+                  class="px-2 relative select-none truncate border-r border-gray-700"
+                  :style="{ width: columnWidths.url + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
                 >
                   URL
                   <span
@@ -242,8 +243,8 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none text-right truncate"
-                  :style="{ width: columnWidths.status + 'px' }"
+                  class="px-2 relative select-none text-right truncate border-r border-gray-700"
+                  :style="{ width: columnWidths.status + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
                 >
                   Status
                   <span
@@ -252,8 +253,8 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none text-right truncate"
-                  :style="{ width: columnWidths.size + 'px' }"
+                  class="px-2 relative select-none text-right truncate border-r border-gray-700"
+                  :style="{ width: columnWidths.size + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
                 >
                   Size
                   <span
@@ -263,7 +264,7 @@ const rowMinWidth = computed(() =>
                 </div>
                 <div
                   class="px-2 relative select-none truncate"
-                  :style="{ width: columnWidths.time + 'px' }"
+                  :style="{ width: columnWidths.time + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
                 >
                   Time
                   <span
@@ -278,30 +279,34 @@ const rowMinWidth = computed(() =>
                   :itemSize="32"
                   class="min-w-max"
                   scrollHeight="100%"
-                  :style="{ width: rowMinWidth + 'px' }"
+                  :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
                 >
-                  <template #item="{ item }">
+                  <template #item="{ item, index }">
                     <div
-                      class="flex text-xs border-b border-gray-700 hover:bg-zinc-900 cursor-pointer"
-                      :style="{ width: rowMinWidth + 'px' }"
+                      class="flex text-xs border-b border-gray-700 cursor-pointer"
+                      :class="[
+                        index % 2 === 0 ? 'bg-zinc-800' : 'bg-zinc-700',
+                        store.selectedMatch === item ? 'bg-blue-700 text-white' : 'hover:bg-zinc-600'
+                      ]"
+                      :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
                       @click="selectRow(item)"
                     >
-                      <div class="px-2 truncate" :style="{ width: columnWidths.source + 'px' }" :title="item.sourceType || 'Proxy'">
+                      <div class="px-2 truncate border-r border-gray-700" :style="{ width: columnWidths.source + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="item.sourceType || 'Proxy'">
                         {{ item.sourceType || 'Proxy' }}
                       </div>
-                      <div class="px-2 truncate" :style="{ width: columnWidths.host + 'px' }" :title="item.host">
+                      <div class="px-2 truncate border-r border-gray-700" :style="{ width: columnWidths.host + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="item.host">
                         {{ item.host }}
                       </div>
-                      <div class="px-2 truncate" :style="{ width: columnWidths.url + 'px' }" :title="item.url">
+                      <div class="px-2 truncate border-r border-gray-700" :style="{ width: columnWidths.url + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="item.url">
                         {{ item.url }}
                       </div>
-                      <div class="px-2" :style="{ width: columnWidths.status + 'px' }" :title="item.status ?? ''">
+                      <div class="px-2 border-r border-gray-700" :style="{ width: columnWidths.status + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="item.status ?? ''">
                         {{ item.status ?? '' }}
                       </div>
-                      <div class="px-2" :style="{ width: columnWidths.size + 'px' }" :title="String(item.size)">
+                      <div class="px-2 border-r border-gray-700 text-right" :style="{ width: columnWidths.size + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="String(item.size)">
                         {{ item.size }}
                       </div>
-                      <div class="px-2 truncate" :style="{ width: columnWidths.time + 'px' }" :title="item.time">
+                      <div class="px-2 truncate" :style="{ width: columnWidths.time + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="item.time">
                         {{ item.time }}
                       </div>
                     </div>
@@ -317,10 +322,10 @@ const rowMinWidth = computed(() =>
           </SplitterPanel>
           <SplitterPanel :size="60" :minSize="40" class="overflow-hidden">
             <div class="flex h-full">
-              <div class="flex-1 overflow-auto" style="height: 50%">
+              <div class="flex-1 overflow-auto">
                 <RequestViewer :match="store.selectedMatch" :pattern="store.pattern" />
               </div>
-              <div class="flex-1 overflow-auto" style="height: 50%">
+              <div class="flex-1 overflow-auto">
                 <ResponseViewer :match="store.selectedMatch" :pattern="store.pattern" />
               </div>
             </div>
