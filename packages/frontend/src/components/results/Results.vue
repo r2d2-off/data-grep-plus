@@ -12,9 +12,11 @@ import VirtualScroller from "primevue/virtualscroller";
 import RequestViewer from "./RequestViewer.vue";
 import ResponseViewer from "./ResponseViewer.vue";
 import { computed, ref, watch, reactive } from "vue";
+import { storeToRefs } from "pinia";
 import type { GrepMatch } from "shared";
 
 const store = useGrepStore();
+const { selectedMatch } = storeToRefs(store);
 const isStoppingSearch = ref(false);
 const isExporting = ref(false);
 const isCopying = ref(false);
@@ -63,7 +65,7 @@ const sortedResults = computed(() => {
 watch(
   () => sortedResults.value,
   (rows) => {
-    if (rows.length > 0 && !store.selectedMatch) {
+    if (rows.length > 0 && !selectedMatch.value) {
       store.selectMatch(rows[0] as GrepMatch);
     } else if (rows.length === 0) {
       store.selectMatch(null);
@@ -126,12 +128,16 @@ const stopSearch = async () => {
 
 const selectRow = (row: GrepMatch) => {
   console.debug("Row clicked", row);
-  if (store.selectedMatch === row) {
+  if (selectedMatch.value === row) {
     store.selectMatch(null);
   } else {
     store.selectMatch(row);
   }
 };
+
+watch(selectedMatch, (m) => {
+  console.debug("Selected match changed", m);
+});
 
 const columnWidths = reactive({
   source: 96,
@@ -290,7 +296,7 @@ const rowMinWidth = computed(() =>
                       class="flex text-xs border-b border-gray-700 cursor-pointer"
                       :class="[
                         index % 2 === 0 ? 'bg-zinc-800' : 'bg-zinc-700',
-                        store.selectedMatch === item ? 'bg-blue-700 text-white' : 'hover:bg-zinc-600'
+                        selectedMatch === item ? 'bg-blue-700 text-white' : 'hover:bg-zinc-600'
                       ]"
                       :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
                       @click="selectRow(item)"
@@ -325,15 +331,15 @@ const rowMinWidth = computed(() =>
             </div>
           </div>
           <div
-            v-if="store.selectedMatch"
+            v-if="selectedMatch"
             class="mt-2 flex border border-gray-700"
             style="height: 40vh; min-height: 300px;"
           >
             <div class="flex-1 overflow-auto">
-              <RequestViewer :match="store.selectedMatch" :pattern="store.pattern" />
+              <RequestViewer :match="selectedMatch" :pattern="store.pattern" />
             </div>
             <div class="flex-1 overflow-auto">
-              <ResponseViewer :match="store.selectedMatch" :pattern="store.pattern" />
+              <ResponseViewer :match="selectedMatch" :pattern="store.pattern" />
             </div>
           </div>
         </div>
