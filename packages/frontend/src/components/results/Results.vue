@@ -209,10 +209,10 @@ const rowMinWidth = computed(() =>
             <div class="border border-gray-700 h-full flex flex-col overflow-hidden">
               <div
                 class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
-                :style="{ minWidth: rowMinWidth + 'px' }"
+                :style="{ width: rowMinWidth + 'px' }"
               >
                 <div
-                  class="px-2 relative select-none"
+                  class="px-2 relative select-none truncate"
                   :style="{ width: columnWidths.source + 'px' }"
                 >
                   Source
@@ -222,7 +222,7 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none"
+                  class="px-2 relative select-none truncate"
                   :style="{ width: columnWidths.host + 'px' }"
                 >
                   Host
@@ -232,8 +232,8 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 flex-1 relative select-none"
-                  :style="{ minWidth: columnWidths.url + 'px' }"
+                  class="px-2 relative select-none truncate"
+                  :style="{ width: columnWidths.url + 'px' }"
                 >
                   URL
                   <span
@@ -242,7 +242,7 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none text-right"
+                  class="px-2 relative select-none text-right truncate"
                   :style="{ width: columnWidths.status + 'px' }"
                 >
                   Status
@@ -252,7 +252,7 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none text-right"
+                  class="px-2 relative select-none text-right truncate"
                   :style="{ width: columnWidths.size + 'px' }"
                 >
                   Size
@@ -262,7 +262,7 @@ const rowMinWidth = computed(() =>
                   ></span>
                 </div>
                 <div
-                  class="px-2 relative select-none"
+                  class="px-2 relative select-none truncate"
                   :style="{ width: columnWidths.time + 'px' }"
                 >
                   Time
@@ -278,29 +278,30 @@ const rowMinWidth = computed(() =>
                   :itemSize="32"
                   class="min-w-max"
                   scrollHeight="100%"
-                  :style="{ minWidth: rowMinWidth + 'px' }"
+                  :style="{ width: rowMinWidth + 'px' }"
                 >
                   <template #item="{ item }">
                     <div
                       class="flex text-xs border-b border-gray-700 hover:bg-zinc-900 cursor-pointer"
+                      :style="{ width: rowMinWidth + 'px' }"
                       @click="selectRow(item)"
                     >
-                      <div class="px-2 truncate" :style="{ width: columnWidths.source + 'px' }">
+                      <div class="px-2 truncate" :style="{ width: columnWidths.source + 'px' }" :title="item.sourceType || 'Proxy'">
                         {{ item.sourceType || 'Proxy' }}
                       </div>
-                      <div class="px-2 truncate" :style="{ width: columnWidths.host + 'px' }">
+                      <div class="px-2 truncate" :style="{ width: columnWidths.host + 'px' }" :title="item.host">
                         {{ item.host }}
                       </div>
-                      <div class="px-2 flex-1 truncate" :style="{ minWidth: columnWidths.url + 'px' }">
+                      <div class="px-2 truncate" :style="{ width: columnWidths.url + 'px' }" :title="item.url">
                         {{ item.url }}
                       </div>
-                      <div class="px-2" :style="{ width: columnWidths.status + 'px' }">
+                      <div class="px-2" :style="{ width: columnWidths.status + 'px' }" :title="item.status ?? ''">
                         {{ item.status ?? '' }}
                       </div>
-                      <div class="px-2" :style="{ width: columnWidths.size + 'px' }">
+                      <div class="px-2" :style="{ width: columnWidths.size + 'px' }" :title="String(item.size)">
                         {{ item.size }}
                       </div>
-                      <div class="px-2 truncate" :style="{ width: columnWidths.time + 'px' }">
+                      <div class="px-2 truncate" :style="{ width: columnWidths.time + 'px' }" :title="item.time">
                         {{ item.time }}
                       </div>
                     </div>
@@ -315,14 +316,14 @@ const rowMinWidth = computed(() =>
             </div>
           </SplitterPanel>
           <SplitterPanel :size="60" :minSize="40" class="overflow-hidden">
-            <Splitter>
-              <SplitterPanel class="overflow-hidden">
+            <div class="flex h-full">
+              <div class="flex-1 overflow-auto" style="height: 50%">
                 <RequestViewer :match="store.selectedMatch" :pattern="store.pattern" />
-              </SplitterPanel>
-              <SplitterPanel class="overflow-hidden">
+              </div>
+              <div class="flex-1 overflow-auto" style="height: 50%">
                 <ResponseViewer :match="store.selectedMatch" :pattern="store.pattern" />
-              </SplitterPanel>
-            </Splitter>
+              </div>
+            </div>
           </SplitterPanel>
         </Splitter>
       </div>
