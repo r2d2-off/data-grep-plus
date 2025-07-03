@@ -306,6 +306,8 @@ export const grepService = {
   ): GrepMatch[] {
     const results: GrepMatch[] = [];
 
+    const id = Number(request.getId());
+
     const reqRaw = request.getRaw()?.toText() || "";
     const respRaw = response?.getRaw()?.toText() || "";
 
@@ -318,6 +320,7 @@ export const grepService = {
       const headerMatches = extractMatches(reqHeaders, regex, matchGroups);
       for (const m of headerMatches) {
         results.push({
+          id,
           url,
           match: m,
           location: "Request Header",
@@ -329,6 +332,7 @@ export const grepService = {
       const bodyMatches = extractMatches(reqBody, regex, matchGroups);
       for (const m of bodyMatches) {
         results.push({
+          id,
           url,
           match: m,
           location: "Request Body",
@@ -342,6 +346,7 @@ export const grepService = {
       const headerMatches = extractMatches(resHeaders, regex, matchGroups);
       for (const m of headerMatches) {
         results.push({
+          id,
           url,
           match: m,
           location: "Response Header",
@@ -353,6 +358,7 @@ export const grepService = {
       const bodyMatches = extractMatches(resBody, regex, matchGroups);
       for (const m of bodyMatches) {
         results.push({
+          id,
           url,
           match: m,
           location: "Response Body",

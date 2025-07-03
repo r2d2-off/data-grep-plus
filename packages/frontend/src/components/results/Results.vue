@@ -9,6 +9,10 @@ import Button from "primevue/button";
 import Card from "primevue/card";
 import Dropdown from "primevue/dropdown";
 import VirtualScroller from "primevue/virtualscroller";
+import Splitter from "primevue/splitter";
+import SplitterPanel from "primevue/splitterpanel";
+import TabView from "primevue/tabview";
+import TabPanel from "primevue/tabpanel";
 import RequestViewer from "./RequestViewer.vue";
 import ResponseViewer from "./ResponseViewer.vue";
 import { computed, ref, watch, reactive } from "vue";
@@ -127,14 +131,16 @@ const stopSearch = async () => {
 };
 
 const isSameMatch = (a: GrepMatch | null, b: GrepMatch | null) => {
-  if (!a || !b) return false;
-  return (
-    a.url === b.url &&
-    a.location === b.location &&
-    a.match === b.match &&
-    a.request === b.request &&
-    a.response === b.response
-  );
+  return !!a && !!b && a.id === b.id;
+};
+
+const openInCaido = async (row: GrepMatch) => {
+  try {
+    await sdk.window.openRequest(row.id);
+  } catch (error) {
+    console.error('Failed to open request', error);
+    sdk.window.showToast('Failed to open request', { variant: 'error' });
+  }
 };
 
 const selectRow = (row: GrepMatch) => {
@@ -227,8 +233,9 @@ const rowMinWidth = computed(() =>
             <Dropdown class="text-xs w-20" :options="[{label:'Asc',value:'asc'},{label:'Desc',value:'desc'}]" v-model="sortDir" optionLabel="label" optionValue="value" />
           </div>
         </div>
-        <div class="flex-1 flex flex-col">
-          <div class="border border-gray-700 flex-1 flex flex-col overflow-hidden">
+        <Splitter class="flex-1" layout="vertical">
+          <SplitterPanel :size="70" :minSize="30">
+            <div class="border border-gray-700 h-full flex flex-col overflow-hidden">
             <div
               class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
               :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
@@ -297,11 +304,12 @@ const rowMinWidth = computed(() =>
             <div class="flex-1 overflow-auto">
               <VirtualScroller
                 :items="sortedResults"
-                  :itemSize="32"
-                  class="min-w-max"
-                  scrollHeight="100%"
-                  :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
-                >
+                itemKey="id"
+                :itemSize="32"
+                class="min-w-max"
+                scrollHeight="100%"
+                :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
+              >
                   <template #item="{ item, index }">
                     <div
                       class="flex text-xs border-b border-gray-700 cursor-pointer"
@@ -311,6 +319,8 @@ const rowMinWidth = computed(() =>
                       ]"
                       :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
                       @click="selectRow(item)"
+                      @dblclick="openInCaido(item)"
+                      @contextmenu.prevent="openInCaido(item)"
                     >
                       <div class="px-2 truncate border-r border-gray-700" :style="{ width: columnWidths.source + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }" :title="item.sourceType || 'Proxy'">
                         {{ item.sourceType || 'Proxy' }}
@@ -337,23 +347,20 @@ const rowMinWidth = computed(() =>
                       No matches found...
                     </div>
                   </template>
-                </VirtualScroller>
-              </div>
+              </VirtualScroller>
             </div>
-          </div>
-          <div
-            v-if="selectedMatch"
-            class="mt-2 flex border border-gray-700"
-            style="height: 40vh; min-height: 300px;"
-          >
-            <div class="flex-1 overflow-auto">
-              <RequestViewer :match="selectedMatch" :pattern="store.pattern" />
-            </div>
-            <div class="flex-1 overflow-auto">
-              <ResponseViewer :match="selectedMatch" :pattern="store.pattern" />
-            </div>
-          </div>
-        </div>
+          </SplitterPanel>
+          <SplitterPanel :size="30" :minSize="20">
+            <TabView class="h-full">
+              <TabPanel header="Request" class="h-full">
+                <RequestViewer :match="selectedMatch" :pattern="store.pattern" />
+              </TabPanel>
+              <TabPanel header="Response" class="h-full">
+                <ResponseViewer :match="selectedMatch" :pattern="store.pattern" />
+              </TabPanel>
+            </TabView>
+          </SplitterPanel>
+        </Splitter>
       </template>
   </Card>
 </template>
