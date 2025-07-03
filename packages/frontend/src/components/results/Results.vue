@@ -13,7 +13,7 @@ import SplitterPanel from "primevue/splitterpanel";
 import VirtualScroller from "primevue/virtualscroller";
 import RequestViewer from "./RequestViewer.vue";
 import ResponseViewer from "./ResponseViewer.vue";
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, reactive } from "vue";
 import type { GrepMatch } from "shared";
 
 const store = useGrepStore();
@@ -126,6 +126,47 @@ const stopSearch = async () => {
 const selectRow = (row: GrepMatch) => {
   store.selectMatch(row);
 };
+
+const columnWidths = reactive({
+  source: 96,
+  host: 160,
+  url: 300,
+  status: 64,
+  size: 64,
+  time: 144,
+});
+
+type ColKey = keyof typeof columnWidths;
+const resizing = ref<null | { col: ColKey; startX: number; startWidth: number }>(null);
+
+const onMouseMove = (e: MouseEvent) => {
+  if (!resizing.value) return;
+  const delta = e.clientX - resizing.value.startX;
+  const newWidth = Math.max(50, resizing.value.startWidth + delta);
+  columnWidths[resizing.value.col] = newWidth;
+};
+
+const stopResize = () => {
+  if (!resizing.value) return;
+  document.removeEventListener("mousemove", onMouseMove);
+  document.removeEventListener("mouseup", stopResize);
+  resizing.value = null;
+};
+
+const startResize = (col: ColKey, e: MouseEvent) => {
+  resizing.value = { col, startX: e.clientX, startWidth: columnWidths[col] };
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", stopResize);
+};
+
+const rowMinWidth = computed(() =>
+  columnWidths.source +
+  columnWidths.host +
+  columnWidths.url +
+  columnWidths.status +
+  columnWidths.size +
+  columnWidths.time
+);
 </script>
 
 <template>
@@ -165,30 +206,112 @@ const selectRow = (row: GrepMatch) => {
         </div>
         <Splitter layout="vertical" class="h-full">
           <SplitterPanel :size="40" :minSize="20">
-            <div class="border border-gray-700 h-full flex flex-col">
-              <div class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700">
-                <div class="w-24 px-2">Source</div>
-                <div class="w-40 px-2">Host</div>
-                <div class="flex-1 px-2">URL</div>
-                <div class="w-16 px-2">Status</div>
-                <div class="w-16 px-2">Size</div>
-                <div class="w-36 px-2">Time</div>
+            <div class="border border-gray-700 h-full flex flex-col overflow-hidden">
+              <div
+                class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
+                :style="{ minWidth: rowMinWidth + 'px' }"
+              >
+                <div
+                  class="px-2 relative select-none"
+                  :style="{ width: columnWidths.source + 'px' }"
+                >
+                  Source
+                  <span
+                    class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
+                    @mousedown="startResize('source', $event)"
+                  ></span>
+                </div>
+                <div
+                  class="px-2 relative select-none"
+                  :style="{ width: columnWidths.host + 'px' }"
+                >
+                  Host
+                  <span
+                    class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
+                    @mousedown="startResize('host', $event)"
+                  ></span>
+                </div>
+                <div
+                  class="px-2 flex-1 relative select-none"
+                  :style="{ minWidth: columnWidths.url + 'px' }"
+                >
+                  URL
+                  <span
+                    class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
+                    @mousedown="startResize('url', $event)"
+                  ></span>
+                </div>
+                <div
+                  class="px-2 relative select-none text-right"
+                  :style="{ width: columnWidths.status + 'px' }"
+                >
+                  Status
+                  <span
+                    class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
+                    @mousedown="startResize('status', $event)"
+                  ></span>
+                </div>
+                <div
+                  class="px-2 relative select-none text-right"
+                  :style="{ width: columnWidths.size + 'px' }"
+                >
+                  Size
+                  <span
+                    class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
+                    @mousedown="startResize('size', $event)"
+                  ></span>
+                </div>
+                <div
+                  class="px-2 relative select-none"
+                  :style="{ width: columnWidths.time + 'px' }"
+                >
+                  Time
+                  <span
+                    class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
+                    @mousedown="startResize('time', $event)"
+                  ></span>
+                </div>
               </div>
-              <VirtualScroller :items="sortedResults" :itemSize="32" class="h-full" scrollHeight="100%">
-                <template #item="{ item }">
-                  <div class="flex text-xs border-b border-gray-700 hover:bg-zinc-900 cursor-pointer" @click="selectRow(item)">
-                    <div class="w-24 px-2 truncate">{{ item.sourceType || 'Proxy' }}</div>
-                    <div class="w-40 px-2 truncate">{{ item.host }}</div>
-                    <div class="flex-1 px-2 truncate">{{ item.url }}</div>
-                    <div class="w-16 px-2">{{ item.status ?? '' }}</div>
-                    <div class="w-16 px-2">{{ item.size }}</div>
-                    <div class="w-36 px-2 truncate">{{ item.time }}</div>
-                  </div>
-                </template>
-                <template #content="{ items, loading }">
-                  <div v-if="!items.length && !loading" class="p-4 text-gray-400">No matches found...</div>
-                </template>
-              </VirtualScroller>
+              <div class="flex-1 overflow-auto">
+                <VirtualScroller
+                  :items="sortedResults"
+                  :itemSize="32"
+                  class="min-w-max"
+                  scrollHeight="100%"
+                  :style="{ minWidth: rowMinWidth + 'px' }"
+                >
+                  <template #item="{ item }">
+                    <div
+                      class="flex text-xs border-b border-gray-700 hover:bg-zinc-900 cursor-pointer"
+                      @click="selectRow(item)"
+                    >
+                      <div class="px-2 truncate" :style="{ width: columnWidths.source + 'px' }">
+                        {{ item.sourceType || 'Proxy' }}
+                      </div>
+                      <div class="px-2 truncate" :style="{ width: columnWidths.host + 'px' }">
+                        {{ item.host }}
+                      </div>
+                      <div class="px-2 flex-1 truncate" :style="{ minWidth: columnWidths.url + 'px' }">
+                        {{ item.url }}
+                      </div>
+                      <div class="px-2" :style="{ width: columnWidths.status + 'px' }">
+                        {{ item.status ?? '' }}
+                      </div>
+                      <div class="px-2" :style="{ width: columnWidths.size + 'px' }">
+                        {{ item.size }}
+                      </div>
+                      <div class="px-2 truncate" :style="{ width: columnWidths.time + 'px' }">
+                        {{ item.time }}
+                      </div>
+                    </div>
+                  </template>
+                  <template #content="{ items, loading }">
+                    <div v-if="!items.length && !loading" class="p-4 text-gray-400">
+                      No matches found...
+                    </div>
+                  </template>
+                </VirtualScroller>
+              </div>
             </div>
           </SplitterPanel>
           <SplitterPanel :size="60" :minSize="40" class="overflow-hidden">
