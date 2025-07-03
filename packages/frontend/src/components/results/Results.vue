@@ -125,6 +125,7 @@ const stopSearch = async () => {
 };
 
 const selectRow = (row: GrepMatch) => {
+  console.debug("Row clicked", row);
   if (store.selectedMatch === row) {
     store.selectMatch(null);
   } else {
