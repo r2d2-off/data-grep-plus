@@ -126,9 +126,20 @@ const stopSearch = async () => {
   }
 };
 
+const isSameMatch = (a: GrepMatch | null, b: GrepMatch | null) => {
+  if (!a || !b) return false;
+  return (
+    a.url === b.url &&
+    a.location === b.location &&
+    a.match === b.match &&
+    a.request === b.request &&
+    a.response === b.response
+  );
+};
+
 const selectRow = (row: GrepMatch) => {
   console.debug("Row clicked", row);
-  if (selectedMatch.value === row) {
+  if (isSameMatch(selectedMatch.value, row)) {
     store.selectMatch(null);
   } else {
     store.selectMatch(row);
@@ -296,7 +307,7 @@ const rowMinWidth = computed(() =>
                       class="flex text-xs border-b border-gray-700 cursor-pointer"
                       :class="[
                         index % 2 === 0 ? 'bg-zinc-800' : 'bg-zinc-700',
-                        selectedMatch === item ? 'bg-blue-700 text-white' : 'hover:bg-zinc-600'
+                        isSameMatch(selectedMatch, item) ? 'bg-blue-700 text-white' : 'hover:bg-zinc-600'
                       ]"
                       :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
                       @click="selectRow(item)"
