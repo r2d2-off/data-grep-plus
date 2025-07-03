@@ -138,8 +138,8 @@ const openInCaido = async (row: GrepMatch) => {
   try {
     await sdk.window.openRequest(row.id);
   } catch (error) {
-    console.error('Failed to open request', error);
-    sdk.window.showToast('Failed to open request', { variant: 'error' });
+    console.error('Failed to open the request', error);
+    sdk.window.showToast('Failed to open the request', { variant: 'error' });
   }
 };
 
