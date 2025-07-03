@@ -4,6 +4,7 @@ import type { GrepMatch } from 'shared';
 
 const props = defineProps<{ match: GrepMatch | null; pattern: string }>();
 const searchTerm = ref(props.pattern);
+const activeTab = ref<'pretty' | 'raw'>('pretty');
 const preRef = ref<HTMLElement | null>(null);
 const matches = ref<HTMLElement[]>([]);
 const currentIndex = ref(0);
@@ -24,6 +25,8 @@ watch(
   }
 );
 
+watch(activeTab, updateMatches);
+
 const escapeHtml = (str: string) =>
   str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -34,9 +37,10 @@ const highlight = (content: string) => {
   return escapeHtml(content).replace(regex, (m) => `<mark class="bg-yellow-300 text-black">${escapeHtml(m)}</mark>`);
 };
 
+const content = computed(() => props.match?.response || '');
+
 const highlightedLines = computed(() => {
-  const content = props.match?.response || '';
-  return highlight(content).split('\n');
+  return highlight(content.value).split('\n');
 });
 
 const updateMatches = async () => {
@@ -77,10 +81,30 @@ onMounted(updateMatches);
 </script>
 <template>
   <div class="flex flex-col h-full border border-gray-700 overflow-hidden">
-    <div ref="preRef" class="flex-1 overflow-auto text-xs font-mono p-2">
+    <div class="border-b border-gray-700 text-xs flex">
+      <button
+        class="px-2 py-1"
+        :class="{ 'bg-zinc-800 font-semibold': activeTab === 'pretty' }"
+        @click="activeTab = 'pretty'"
+      >
+        Pretty
+      </button>
+      <button
+        class="px-2 py-1"
+        :class="{ 'bg-zinc-800 font-semibold': activeTab === 'raw' }"
+        @click="activeTab = 'raw'"
+      >
+        Raw
+      </button>
+    </div>
+    <div
+      ref="preRef"
+      class="flex-1 overflow-auto text-xs font-mono p-2"
+      :class="activeTab === 'raw' ? 'whitespace-pre' : 'whitespace-pre-wrap'"
+    >
       <div v-for="(line, i) in highlightedLines" :key="i" class="flex code-line">
         <div class="w-10 pr-2 select-none text-right text-gray-500">{{ i + 1 }}</div>
-        <div class="whitespace-pre-wrap flex-1" v-html="line"></div>
+        <div class="flex-1" v-html="line"></div>
       </div>
     </div>
     <div class="p-1 border-t border-gray-700 flex items-center gap-1 text-xs">
