@@ -349,6 +349,7 @@ const rowMinWidth = computed(() =>
                   </template>
               </VirtualScroller>
             </div>
+          </div>
           </SplitterPanel>
           <SplitterPanel :size="30" :minSize="20">
             <TabView class="h-full">
