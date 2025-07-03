@@ -14,8 +14,16 @@ export interface GrepStatus {
   progress: number;
 }
 
+export interface GrepMatch {
+  url: string;
+  match: string;
+  location: string;
+  request: string;
+  response?: string;
+}
+
 export interface GrepResults {
-  searchResults: string[] | null;
+  searchResults: GrepMatch[] | null;
   uniqueMatchesCount: number;
   searchTime: number;
   cancelled: boolean;
