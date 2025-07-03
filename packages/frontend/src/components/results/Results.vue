@@ -362,6 +362,7 @@ const rowMinWidth = computed(() =>
             </TabView>
           </SplitterPanel>
         </Splitter>
-      </template>
+      </div>
+    </template>
   </Card>
 </template>
