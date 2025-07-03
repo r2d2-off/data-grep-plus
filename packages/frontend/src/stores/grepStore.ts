@@ -34,6 +34,11 @@ export const useGrepStore = defineStore("grep", () => {
     cancelled: false,
   });
 
+  const selectedMatch = ref<GrepMatch | null>(null);
+  const selectMatch = (match: GrepMatch) => {
+    selectedMatch.value = match;
+  };
+
   const searchGrepRequests = async () => {
     if (!pattern.value.trim()) {
       sdk.window.showToast("Please enter a search pattern", {
@@ -123,6 +128,8 @@ export const useGrepStore = defineStore("grep", () => {
     options,
     status,
     results,
+    selectedMatch,
+    selectMatch,
     searchGrepRequests,
   };
 });
