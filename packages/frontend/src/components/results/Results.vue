@@ -8,8 +8,6 @@ import { extractHost, extractStatusCode, extractDate } from "@/utils/http";
 import Button from "primevue/button";
 import Card from "primevue/card";
 import Dropdown from "primevue/dropdown";
-import Splitter from "primevue/splitter";
-import SplitterPanel from "primevue/splitterpanel";
 import VirtualScroller from "primevue/virtualscroller";
 import RequestViewer from "./RequestViewer.vue";
 import ResponseViewer from "./ResponseViewer.vue";
@@ -211,13 +209,12 @@ const rowMinWidth = computed(() =>
             <Dropdown class="text-xs w-20" :options="[{label:'Asc',value:'asc'},{label:'Desc',value:'desc'}]" v-model="sortDir" optionLabel="label" optionValue="value" />
           </div>
         </div>
-        <Splitter layout="vertical" class="h-full">
-          <SplitterPanel :size="store.selectedMatch ? 40 : 100" :minSize="20">
-            <div class="border border-gray-700 h-full flex flex-col overflow-hidden">
-              <div
-                class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
-                :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
-              >
+        <div class="flex-1 flex flex-col">
+          <div class="border border-gray-700 flex-1 flex flex-col overflow-hidden">
+            <div
+              class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
+              :style="{ minWidth: rowMinWidth + 'px', width: '100%' }"
+            >
                 <div
                   class="px-2 relative select-none truncate border-r border-gray-700"
                   :style="{ width: columnWidths.source + 'px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }"
@@ -277,11 +274,11 @@ const rowMinWidth = computed(() =>
                     class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize"
                     @mousedown="startResize('time', $event)"
                   ></span>
-                </div>
               </div>
-              <div class="flex-1 overflow-auto">
-                <VirtualScroller
-                  :items="sortedResults"
+            </div>
+            <div class="flex-1 overflow-auto">
+              <VirtualScroller
+                :items="sortedResults"
                   :itemSize="32"
                   class="min-w-max"
                   scrollHeight="100%"
@@ -325,29 +322,20 @@ const rowMinWidth = computed(() =>
                 </VirtualScroller>
               </div>
             </div>
-          </SplitterPanel>
-          <SplitterPanel
+          </div>
+          <div
             v-if="store.selectedMatch"
-            :size="60"
-            :minSize="40"
-            class="overflow-hidden"
+            class="mt-2 flex border border-gray-700"
+            style="height: 40vh; min-height: 300px;"
           >
-            <div class="flex h-full">
-              <div class="flex-1 overflow-auto">
-                <RequestViewer
-                  :match="store.selectedMatch"
-                  :pattern="store.pattern"
-                />
-              </div>
-              <div class="flex-1 overflow-auto">
-                <ResponseViewer
-                  :match="store.selectedMatch"
-                  :pattern="store.pattern"
-                />
-              </div>
+            <div class="flex-1 overflow-auto">
+              <RequestViewer :match="store.selectedMatch" :pattern="store.pattern" />
             </div>
-          </SplitterPanel>
-        </Splitter>
+            <div class="flex-1 overflow-auto">
+              <ResponseViewer :match="store.selectedMatch" :pattern="store.pattern" />
+            </div>
+          </div>
+        </div>
       </div>
     </template>
   </Card>
