@@ -1,5 +1,5 @@
 import type { Request, RequestsQuery, Response } from "caido:utils";
-import type { GrepOptions } from "shared";
+import type { GrepOptions, GrepMatch } from "shared";
 import type { CaidoBackendSDK } from "../types";
 import {
   buildRegexFilter,
@@ -172,6 +172,7 @@ export const grepService = {
     } = options;
 
     const matches: Set<string> = new Set();
+    let batchMatches: GrepMatch[] = [];
     const regexFilter = buildRegexFilter(regex, options);
 
     let hasNextPage = true;
@@ -228,7 +229,7 @@ export const grepService = {
           continue;
         }
 
-        const newMatches = this.findMatchesInRequestResponse(
+        const contextMatches = this.findMatchesInRequestResponse(
           sdk,
           item.request,
           item.response,
@@ -238,9 +239,9 @@ export const grepService = {
           includeResponses
         );
 
-        if (newMatches.length > 0) {
-          for (const content of newMatches) {
-            let processedContent = content.trim();
+        if (contextMatches.length > 0) {
+          for (const matchObj of contextMatches) {
+            let processedContent = matchObj.match.trim();
 
             // Skip matches with non-printable characters if cleanup is enabled
             if (
@@ -261,6 +262,10 @@ export const grepService = {
                 break;
               }
             }
+
+            if (matches.size <= 25000) {
+              batchMatches.push(matchObj);
+            }
           }
         }
       }
@@ -270,8 +275,9 @@ export const grepService = {
         const newMatches = Array.from(matches).slice(sentMatchCount);
         if (sentMatchCount > 25000) {
           sdk.api.send("caidogrep:matches", newMatches.length);
-        } else {
-          sdk.api.send("caidogrep:matches", newMatches);
+        } else if (batchMatches.length > 0) {
+          sdk.api.send("caidogrep:matches", batchMatches);
+          batchMatches = [];
         }
         sentMatchCount = matches.size;
       }
@@ -297,35 +303,83 @@ export const grepService = {
     matchGroups: number[] | null,
     includeRequests: boolean,
     includeResponses: boolean
-  ): string[] {
-    const contentMatches: string[] = [];
+  ): GrepMatch[] {
+    const results: GrepMatch[] = [];
+
+    const reqRaw = request.getRaw()?.toText() || "";
+    const respRaw = response?.getRaw()?.toText() || "";
+
+    const url = this.getRequestUrl(reqRaw);
+
+    const [reqHeaders, reqBody] = this.splitRawMessage(reqRaw);
+    const [resHeaders, resBody] = this.splitRawMessage(respRaw);
 
     if (includeRequests) {
-      const rawMatches = extractMatches(
-        request.getRaw()?.toText() || "",
-        regex,
-        matchGroups
-      );
-      if (rawMatches) {
-        contentMatches.push(...rawMatches);
+      const headerMatches = extractMatches(reqHeaders, regex, matchGroups);
+      for (const m of headerMatches) {
+        results.push({
+          url,
+          match: m,
+          location: "Request Header",
+          request: reqRaw,
+          response: includeResponses ? respRaw : undefined,
+        });
+      }
+
+      const bodyMatches = extractMatches(reqBody, regex, matchGroups);
+      for (const m of bodyMatches) {
+        results.push({
+          url,
+          match: m,
+          location: "Request Body",
+          request: reqRaw,
+          response: includeResponses ? respRaw : undefined,
+        });
       }
     }
 
     if (includeResponses && response) {
-      const responseRawMatches = extractMatches(
-        response.getRaw()?.toText() || "",
-        regex,
-        matchGroups
-      );
+      const headerMatches = extractMatches(resHeaders, regex, matchGroups);
+      for (const m of headerMatches) {
+        results.push({
+          url,
+          match: m,
+          location: "Response Header",
+          request: reqRaw,
+          response: respRaw,
+        });
+      }
 
-      if (responseRawMatches) {
-        for (const match of responseRawMatches) {
-          contentMatches.push(match);
-        }
+      const bodyMatches = extractMatches(resBody, regex, matchGroups);
+      for (const m of bodyMatches) {
+        results.push({
+          url,
+          match: m,
+          location: "Response Body",
+          request: reqRaw,
+          response: respRaw,
+        });
       }
     }
 
-    return contentMatches;
+    return results;
+  },
+
+  splitRawMessage(raw: string): [string, string] {
+    if (!raw) return ["", ""];
+    const index = raw.indexOf("\r\n\r\n");
+    if (index === -1) return [raw, ""];
+    const headers = raw.slice(0, index);
+    const body = raw.slice(index + 4);
+    return [headers, body];
+  },
+
+  getRequestUrl(raw: string): string {
+    const firstLine = raw.split(/\r?\n/)[0] || "";
+    const [, path] = firstLine.split(" ");
+    const hostMatch = raw.match(/\nHost:\s*(.*)/i);
+    const host = hostMatch ? hostMatch[1].trim() : "";
+    return host ? `http://${host}${path}` : path || "";
   },
 
   /**

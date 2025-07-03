@@ -8,6 +8,7 @@ import Button from "primevue/button";
 import Card from "primevue/card";
 import Dropdown from "primevue/dropdown";
 import VirtualScroller from "primevue/virtualscroller";
+import MatchItem from "./MatchItem.vue";
 import { computed, ref } from "vue";
 
 const store = useGrepStore();
@@ -18,34 +19,18 @@ const sdk = useSDK();
 
 type SortType =
   | "none"
-  | "alphabetical-asc"
-  | "alphabetical-desc"
-  | "length-asc"
-  | "length-desc";
+  | "url-asc"
+  | "url-desc"
+  | "location-asc"
+  | "location-desc";
 const currentSort = ref<SortType>("none");
 
 const sortOptions = [
   { label: "No sorting", value: "none", icon: "fas fa-list" },
-  {
-    label: "Alphabetical A-Z",
-    value: "alphabetical-asc",
-    icon: "fas fa-sort-alpha-down",
-  },
-  {
-    label: "Alphabetical Z-A",
-    value: "alphabetical-desc",
-    icon: "fas fa-sort-alpha-up",
-  },
-  {
-    label: "Length (Short to Long)",
-    value: "length-asc",
-    icon: "fas fa-sort-numeric-down",
-  },
-  {
-    label: "Length (Long to Short)",
-    value: "length-desc",
-    icon: "fas fa-sort-numeric-up",
-  },
+  { label: "URL A-Z", value: "url-asc", icon: "fas fa-sort-alpha-down" },
+  { label: "URL Z-A", value: "url-desc", icon: "fas fa-sort-alpha-up" },
+  { label: "Location A-Z", value: "location-asc", icon: "fas fa-sort-alpha-down" },
+  { label: "Location Z-A", value: "location-desc", icon: "fas fa-sort-alpha-up" },
 ];
 
 const { downloadResults, stopGrep } = useGrepRepository();
@@ -60,28 +45,14 @@ const sortedResults = computed(() => {
   const results = [...store.results.searchResults];
 
   switch (currentSort.value) {
-    case "alphabetical-asc":
-      return results.sort((a, b) =>
-        a.toLowerCase().localeCompare(b.toLowerCase())
-      );
-    case "alphabetical-desc":
-      return results.sort((a, b) =>
-        b.toLowerCase().localeCompare(a.toLowerCase())
-      );
-    case "length-asc":
-      return results.sort((a, b) => {
-        const lengthDiff = a.length - b.length;
-        return lengthDiff !== 0
-          ? lengthDiff
-          : a.toLowerCase().localeCompare(b.toLowerCase());
-      });
-    case "length-desc":
-      return results.sort((a, b) => {
-        const lengthDiff = b.length - a.length;
-        return lengthDiff !== 0
-          ? lengthDiff
-          : a.toLowerCase().localeCompare(b.toLowerCase());
-      });
+    case "url-asc":
+      return results.sort((a, b) => a.url.localeCompare(b.url));
+    case "url-desc":
+      return results.sort((a, b) => b.url.localeCompare(a.url));
+    case "location-asc":
+      return results.sort((a, b) => a.location.localeCompare(b.location));
+    case "location-desc":
+      return results.sort((a, b) => b.location.localeCompare(a.location));
     default:
       return results;
   }
@@ -187,17 +158,13 @@ const stopSearch = async () => {
           <VirtualScroller
             v-if="store.results.searchResults?.length"
             :items="sortedResults"
-            :itemSize="24"
+            :itemSize="80"
             class="w-full h-full border border-gray-700 transition-all duration-200"
             scrollHeight="100%"
             :key="currentSort"
           >
             <template #item="{ item }">
-              <div
-                class="p-1 bg-zinc-900/30 transition-colors select-text hover:bg-zinc-800/50"
-              >
-                {{ item }}
-              </div>
+              <MatchItem :match="item" />
             </template>
             <template #content="{ items, loading }">
               <div v-if="!items.length && !loading" class="p-4 text-gray-400">
