@@ -35,7 +35,7 @@ export const useGrepStore = defineStore("grep", () => {
   });
 
   const selectedMatch = ref<GrepMatch | null>(null);
-  const selectMatch = (match: GrepMatch) => {
+  const selectMatch = (match: GrepMatch | null) => {
     selectedMatch.value = match;
   };
 

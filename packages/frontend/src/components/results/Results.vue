@@ -65,8 +65,10 @@ const sortedResults = computed(() => {
 watch(
   () => sortedResults.value,
   (rows) => {
-    if (rows.length > 0) {
+    if (rows.length > 0 && !store.selectedMatch) {
       store.selectMatch(rows[0] as GrepMatch);
+    } else if (rows.length === 0) {
+      store.selectMatch(null);
     }
   },
   { immediate: true }
@@ -125,7 +127,11 @@ const stopSearch = async () => {
 };
 
 const selectRow = (row: GrepMatch) => {
-  store.selectMatch(row);
+  if (store.selectedMatch === row) {
+    store.selectMatch(null);
+  } else {
+    store.selectMatch(row);
+  }
 };
 
 const columnWidths = reactive({
@@ -206,7 +212,7 @@ const rowMinWidth = computed(() =>
           </div>
         </div>
         <Splitter layout="vertical" class="h-full">
-          <SplitterPanel :size="40" :minSize="20">
+          <SplitterPanel :size="store.selectedMatch ? 40 : 100" :minSize="20">
             <div class="border border-gray-700 h-full flex flex-col overflow-hidden">
               <div
                 class="flex bg-zinc-800 text-xs font-semibold border-b border-gray-700 sticky top-0 z-10"
@@ -320,13 +326,24 @@ const rowMinWidth = computed(() =>
               </div>
             </div>
           </SplitterPanel>
-          <SplitterPanel :size="60" :minSize="40" class="overflow-hidden">
+          <SplitterPanel
+            v-if="store.selectedMatch"
+            :size="60"
+            :minSize="40"
+            class="overflow-hidden"
+          >
             <div class="flex h-full">
               <div class="flex-1 overflow-auto">
-                <RequestViewer :match="store.selectedMatch" :pattern="store.pattern" />
+                <RequestViewer
+                  :match="store.selectedMatch"
+                  :pattern="store.pattern"
+                />
               </div>
               <div class="flex-1 overflow-auto">
-                <ResponseViewer :match="store.selectedMatch" :pattern="store.pattern" />
+                <ResponseViewer
+                  :match="store.selectedMatch"
+                  :pattern="store.pattern"
+                />
               </div>
             </div>
           </SplitterPanel>
