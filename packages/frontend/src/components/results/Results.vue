@@ -191,12 +191,12 @@ const selectRow = (row: GrepMatch) => {
               </VirtualScroller>
             </div>
           </SplitterPanel>
-          <SplitterPanel :size="60" :minSize="40">
+          <SplitterPanel :size="60" :minSize="40" class="overflow-hidden">
             <Splitter>
-              <SplitterPanel>
+              <SplitterPanel class="overflow-hidden">
                 <RequestViewer :match="store.selectedMatch" :pattern="store.pattern" />
               </SplitterPanel>
-              <SplitterPanel>
+              <SplitterPanel class="overflow-hidden">
                 <ResponseViewer :match="store.selectedMatch" :pattern="store.pattern" />
               </SplitterPanel>
             </Splitter>
