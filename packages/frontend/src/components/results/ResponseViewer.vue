@@ -38,6 +38,7 @@ const highlight = (content: string) => {
 };
 
 const content = computed(() => props.match?.response || '');
+const hasContent = computed(() => !!content.value);
 
 const highlightedLines = computed(() => {
   return highlight(content.value).split('\n');
@@ -98,6 +99,7 @@ onMounted(updateMatches);
       </button>
     </div>
     <div
+      v-if="hasContent"
       ref="preRef"
       class="flex-1 overflow-auto text-xs font-mono p-2"
       :class="activeTab === 'raw' ? 'whitespace-pre' : 'whitespace-pre-wrap'"
@@ -106,6 +108,9 @@ onMounted(updateMatches);
         <div class="w-10 pr-2 select-none text-right text-gray-500">{{ i + 1 }}</div>
         <div class="flex-1" v-html="line"></div>
       </div>
+    </div>
+    <div v-else class="flex-1 flex items-center justify-center text-gray-500 text-sm">
+      No response available
     </div>
     <div class="p-1 border-t border-gray-700 flex items-center gap-1 text-xs">
       <input v-model="searchTerm" class="p-1 flex-1" placeholder="Search..." />
