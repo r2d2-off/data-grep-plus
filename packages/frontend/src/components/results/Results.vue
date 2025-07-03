@@ -336,7 +336,6 @@ const rowMinWidth = computed(() =>
             </div>
           </div>
         </div>
-      </div>
-    </template>
+      </template>
   </Card>
 </template>
